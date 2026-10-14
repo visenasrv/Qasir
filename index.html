@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Qasir · Aplikasi Kasir UMKM</title>
+  <meta name="description" content="Qasir — aplikasi kasir untuk UMKM jajanan, roti, donat & kopi. Tetap jalan saat offline.">
+  <meta name="theme-color" content="#F26B1D">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qasir">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Koneksi awal ke server GAS: hemat 100–300 ms di request pertama -->
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+  <link rel="dns-prefetch" href="https://drive.google.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Playfair+Display:ital,wght@0,700;0,800;1,400&display=swap">
+
+  <link rel="stylesheet" href="css/style.css?v=1.0.0">
+</head>
+<body>
+  <div id="app">
+    <!-- Splash: tampil instan sebelum JS siap -->
+    <div class="splash"><div style="text-align:center"><div class="logo" style="margin:0 auto 14px">Q</div><div class="spinner"></div></div></div>
+  </div>
+  <noscript><p style="padding:24px;font-family:sans-serif">Aktifkan JavaScript untuk memakai Qasir.</p></noscript>
+
+  <script src="js/config.js?v=1.0.0" defer></script>
+  <script src="js/icons.js?v=1.0.0" defer></script>
+  <script src="js/core.js?v=1.0.0" defer></script>
+  <script src="js/hpp.js?v=1.0.0" defer></script>
+  <script src="js/barcode.js?v=1.0.0" defer></script>
+  <script src="js/printer.js?v=1.0.0" defer></script>
+  <script src="js/p-kasir.js?v=1.0.0" defer></script>
+  <script src="js/p-ops.js?v=1.0.0" defer></script>
+  <script src="js/p-owner.js?v=1.0.0" defer></script>
+  <script src="js/p-promo.js?v=1.0.0" defer></script>
+  <script src="js/app.js?v=1.0.0" defer></script>
+</body>
+</html>
