@@ -265,21 +265,25 @@ page('laporan', {
       } catch (e) { toast(e.message, 'bad'); }
       busy(a, false);
     },
-    pdf() {
+    pdf(a) {
       if (!this.data) return;
       const d = this.data, L = d.labaRugi, st = App.settings;
-      const rows = (arr, cols) => arr.map((r) => '<tr>' + cols.map((c, i) => '<td' + (i ? ' style="text-align:right"' : '') + '>' + c(r) + '</td>').join('') + '</tr>').join('');
-      const w = window.open('', '_blank');
-      if (!w) { toast('Izinkan pop-up untuk mengunduh PDF', 'warn'); return; }
-      w.document.write('<html><head><title>Laporan ' + esc(st.nama_toko) + '</title><style>body{font-family:Arial,sans-serif;color:#1F2937;padding:24px;font-size:12px}h1{color:' + esc(st.warna_primer || '#F26B1D') + ';margin:0}table{width:100%;border-collapse:collapse;margin:8px 0 18px}td,th{border-bottom:1px solid #E5E7EB;padding:6px;text-align:left}th{background:#F6F7F9;font-size:11px;text-transform:uppercase}.r{text-align:right}h3{margin:16px 0 4px}</style></head><body>' +
-        '<h1>' + esc(st.nama_toko) + '</h1><div>Laporan penjualan ' + fmtDateLong(d.from) + ' – ' + fmtDateLong(d.to) + '</div>' +
-        '<h3>Laba rugi</h3><table>' + [['Transaksi', L.trx], ['Penjualan kotor', rp(L.bruto)], ['Diskon', '-' + rp(L.diskon)], ['Penjualan bersih', rp(L.bersih)], ['HPP', '-' + rp(L.hpp)], ['Laba kotor', rp(L.labaKotor)], ['Biaya operasional (prorata)', '-' + rp(L.biayaOps)], ['Laba bersih estimasi', rp(L.labaBersih)]].map((x) => '<tr><td>' + x[0] + '</td><td class="r"><b>' + x[1] + '</b></td></tr>').join('') + '</table>' +
-        '<h3>Per produk</h3><table><tr><th>Produk</th><th class="r">Qty</th><th class="r">Omzet</th><th class="r">Laba</th></tr>' + rows(d.byProduct, [(p) => esc(p.nama), (p) => fmtNum(p.qty), (p) => rp(p.omzet), (p) => rp(p.omzet - p.hpp)]) + '</table>' +
-        '<h3>Per metode bayar</h3><table><tr><th>Metode</th><th class="r">Trx</th><th class="r">Omzet</th></tr>' + rows(d.byMethod, [(p) => METODE_LABEL[p.metode] || p.metode, (p) => p.trx, (p) => rp(p.omzet)]) + '</table>' +
-        '<h3>Per kasir</h3><table><tr><th>Kasir</th><th class="r">Trx</th><th class="r">Omzet</th></tr>' + rows(d.byKasir, [(p) => esc(p.nama), (p) => p.trx, (p) => rp(p.omzet)]) + '</table>' +
-        (d.batal.length ? '<h3 style="color:#DC2626">Transaksi dibatalkan</h3><table><tr><th>Nota</th><th class="r">Total</th><th class="r">Alasan</th></tr>' + rows(d.batal, [(b) => esc(b.no_nota), (b) => rp(b.total), (b) => esc(b.alasan || '-') + ' (' + esc(b.oleh || '-') + ')']) + '</table>' : '') +
-        '<script>setTimeout(function(){print()},300)<\/script></body></html>');
-      w.document.close();
+      const th = 'style="background:#F6F7F9;font-size:11px;text-transform:uppercase;padding:7px;text-align:left;border-bottom:1px solid #E5E7EB"';
+      const td = (v, r) => '<td style="padding:7px;border-bottom:1px solid #E5E7EB' + (r ? ';text-align:right' : '') + '">' + v + '</td>';
+      const table = (head, rows) => '<table style="width:100%;border-collapse:collapse;margin:6px 0 18px;font-size:12.5px"><tr>' + head.map((h, i) => '<th ' + th.replace('text-align:left', i ? 'text-align:right' : 'text-align:left') + '>' + h + '</th>').join('') + '</tr>' + (rows.length ? rows.join('') : '<tr>' + td('Tidak ada data') + '</tr>') + '</table>';
+      const h3 = (t, c) => '<h3 style="margin:16px 0 4px;font-size:15px;color:' + (c || '#1F2937') + '">' + t + '</h3>';
+      const el = document.createElement('div');
+      el.style.cssText = 'font-family:var(--font);color:#1F2937;padding:24px;background:#fff';
+      el.innerHTML = '<div style="display:flex;align-items:center;gap:12px">' + logoHtml('md') + '<div><div style="font-size:22px;font-weight:800;color:var(--p)">' + esc(st.nama_toko) + '</div><div style="color:#6B7280">Laporan penjualan ' + fmtDateLong(d.from) + ' – ' + fmtDateLong(d.to) + '</div></div></div>' +
+        h3('Laba rugi') + table(['Keterangan', 'Nilai'], [['Transaksi', L.trx], ['Penjualan kotor', rp(L.bruto)], ['Diskon', '-' + rp(L.diskon)], ['Penjualan bersih', rp(L.bersih)], ['HPP', '-' + rp(L.hpp)], ['Laba kotor', rp(L.labaKotor)], ['Biaya operasional (prorata)', '-' + rp(L.biayaOps)], ['<b>Laba bersih estimasi</b>', '<b>' + rp(L.labaBersih) + '</b>']].map((x) => '<tr>' + td(x[0]) + td(x[1], 1) + '</tr>')) +
+        h3('Per produk') + table(['Produk', 'Qty', 'Omzet', 'Laba'], d.byProduct.map((p) => '<tr>' + td(esc(p.nama)) + td(fmtNum(p.qty), 1) + td(rp(p.omzet), 1) + td(rp(p.omzet - p.hpp), 1) + '</tr>')) +
+        h3('Per kategori') + table(['Kategori', 'Qty', 'Omzet'], d.byCategory.map((p) => '<tr>' + td(esc(p.kategori)) + td(fmtNum(p.qty), 1) + td(rp(p.omzet), 1) + '</tr>')) +
+        h3('Per metode bayar') + table(['Metode', 'Trx', 'Omzet'], d.byMethod.map((p) => '<tr>' + td(METODE_LABEL[p.metode] || p.metode) + td(p.trx, 1) + td(rp(p.omzet), 1) + '</tr>')) +
+        h3('Per kasir') + table(['Kasir', 'Trx', 'Omzet'], d.byKasir.map((p) => '<tr>' + td(esc(p.nama)) + td(p.trx, 1) + td(rp(p.omzet), 1) + '</tr>')) +
+        h3('Harian') + table(['Tanggal', 'Trx', 'Omzet', 'Laba'], d.byDay.map((p) => '<tr>' + td(fmtDate(p.tanggal + 'T00:00')) + td(p.trx, 1) + td(rp(p.omzet), 1) + td(rp(p.laba), 1) + '</tr>')) +
+        (d.batal.length ? h3('Transaksi dibatalkan', '#DC2626') + table(['Nota', 'Total', 'Alasan'], d.batal.map((b) => '<tr style="color:#DC2626">' + td(esc(b.no_nota)) + td(rp(b.total), 1) + td(esc(b.alasan || '-') + ' (' + esc(b.oleh || '-') + ')', 1) + '</tr>')) : '') +
+        '<div style="color:#9CA3AF;font-size:11px;margin-top:10px">Dibuat dari aplikasi Qasir · ' + fmtDT(new Date()) + '</div>';
+      runExport(a, () => Exporter.pdf(el, 'Laporan-' + (st.nama_toko || 'Qasir').replace(/\W+/g, '-') + '-' + ymd(d.from) + '_' + ymd(d.to) + '.pdf', { width: 780, pixelRatio: 2, page: 'a4', breakSel: 'tr, h3', keepSel: 'h3, tr:first-child' }));
     }
   }
 });
@@ -352,7 +356,6 @@ page('produk-form', {
   render(el) {
     const f = this.f, cats = App.boot.categories || [];
     const hppVal = f.isNew ? 0 : toNum((App.boot.hpp && App.boot.hpp.base[f.produk_id] || {}).total);
-    const margin = f.harga_jual > 0 && hppVal ? Math.round((1 - hppVal / f.harga_jual) * 100) : null;
     const recipe = (App.boot.recipes || []).filter((r) => r.produk_id === f.produk_id && !r.varian_id);
     const mats = {}; (App.boot.materials || []).forEach((m) => { mats[m.bahan_id] = m; });
     const img = f.foto || (!f.hapusFoto && f.foto_url);
@@ -367,7 +370,7 @@ page('produk-form', {
       '<label class="field"><span class="lbl">Kategori <span class="req">*</span></span><select class="select" data-f="kategori_id">' + cats.map((c) => '<option value="' + esc(c.kategori_id) + '"' + (c.kategori_id === f.kategori_id ? ' selected' : '') + '>' + esc(c.nama) + '</option>').join('') + '</select></label>' +
       '<div class="field"><span class="lbl">Tipe Stok <span class="req">*</span></span><div class="seg"><button type="button" data-act="tipe" data-v="STOK_JADI" class="' + (f.tipe_stok === 'STOK_JADI' ? 'on' : '') + '">Stok Jadi</button><button type="button" data-act="tipe" data-v="RACIK" class="' + (f.tipe_stok === 'RACIK' ? 'on' : '') + '">Racik dari Resep</button></div>' +
       '<div class="help">' + icon('info', 'xs') + (f.tipe_stok === 'RACIK' ? 'Stok bahan baku berkurang otomatis sesuai resep saat terjual.' : 'Stok produk jadi (roti, donat) berkurang saat terjual & bertambah lewat Stok Masuk.') + '</div></div>' +
-      '<div class="field"><span class="lbl">Harga Jual <span class="req">*</span>' + (!f.isNew ? '<a class="link-btn" href="#/hpp/' + esc(f.produk_id) + '" style="font-size:13px">Lihat HPP' + (hppVal ? ' → ' + rp(hppVal) : '') + '</a>' : '') + '</span><div class="input-wrap">' + moneyInput('data-f="harga_jual" placeholder="0"', f.harga_jual) + (margin !== null ? '<span class="suffix pill ' + (margin >= 55 ? 'ok' : margin >= 45 ? 'warn' : 'bad') + ' sm">Margin ' + margin + '%</span>' : '') + '</div></div>' +
+      '<div class="field"><span class="lbl">Harga Jual <span class="req">*</span>' + (!f.isNew ? '<a class="link-btn" href="#/hpp/' + esc(f.produk_id) + '" style="font-size:13px">Lihat HPP' + (hppVal ? ' → ' + rp(hppVal) : '') + '</a>' : '') + '</span><div class="input-wrap">' + moneyInput('data-f="harga_jual" placeholder="0"', f.harga_jual) + '<span class="suffix pill sm js-margin" hidden></span></div><div class="help js-margin-info"></div></div>' +
       (f.tipe_stok === 'STOK_JADI' ? '<div class="grid-2">' + (f.isNew ? '<label class="field"><span class="lbl">Stok awal</span><input class="input" data-f="stok" inputmode="numeric" value="' + (f.stok || '') + '" placeholder="0"></label>' : '') +
         '<label class="field"' + (f.isNew ? ' style="margin-top:14px"' : '') + '><span class="lbl">Stok minimum</span><input class="input" data-f="stok_minimum" inputmode="numeric" value="' + (f.stok_minimum || '') + '" placeholder="5"></label>' + (f.isNew ? '' : '<label class="field" style="margin-top:14px"><span class="lbl">Satuan</span><input class="input" data-f="satuan" value="' + esc(f.satuan) + '"></label>') + '</div>' : '') +
       '<div class="row between" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line-2)"><div><b style="font-size:14px">Tampilkan di Daftar Menu</b><div class="muted" style="font-size:12.5px">Masuk ke menu cetak & WA</div></div><label class="toggle"><input type="checkbox" data-f="tampil_di_menu"' + (f.tampil_di_menu ? ' checked' : '') + '></label></div></div>' +
@@ -385,6 +388,19 @@ page('produk-form', {
       (!f.isNew ? '<div class="card pad" style="margin-top:12px"><div class="card-h"><span class="sec-title">Resep</span><a class="link-btn" href="#/hpp/' + esc(f.produk_id) + '">Atur Resep →</a></div>' +
         (recipe.length ? recipe.map((r) => '<div class="sum-row"><span>' + esc((mats[r.bahan_id] || {}).nama || '?') + '</span><span class="v mono">' + fmtNum(r.takaran) + ' ' + esc((mats[r.bahan_id] || {}).satuan_pakai || '') + '</span></div>').join('') : '<div class="muted" style="font-size:13.5px">Belum ada resep. Atur resep agar HPP & stok bahan terhitung.</div>') + '</div>' +
         '<button class="btn outline block" data-act="deactivate" type="button" style="margin-top:14px;color:var(--bad)">' + icon('trash', 'sm') + 'Nonaktifkan Produk</button>' : '<div class="help" style="margin-top:12px">' + icon('info', 'xs') + 'Resep & HPP bisa diatur setelah produk disimpan.</div>') + '<div style="height:16px"></div>';
+    // Margin langsung berubah saat harga diketik (tanpa perlu menyimpan dulu)
+    const hi = $('[data-f="harga_jual"]', el);
+    const upd = () => this.liveMargin(el, hppVal, parseMoney(hi.value));
+    hi.addEventListener('input', upd); upd();
+  },
+  liveMargin(el, hpp, harga) {
+    const pill = $('.js-margin', el), info = $('.js-margin-info', el); if (!pill) return;
+    if (!hpp) { pill.hidden = true; info.innerHTML = icon('info', 'xs') + (this.f.isNew ? 'Margin muncul setelah resep diatur (simpan produk dulu, lalu Atur Resep).' : 'Atur resep untuk melihat HPP & margin.'); return; }
+    if (!harga) { pill.hidden = true; info.innerHTML = icon('info', 'xs') + 'HPP ' + rp(hpp) + '/porsi — ketik harga jual untuk melihat margin.'; return; }
+    const m = Math.round((1 - hpp / harga) * 1000) / 10, laba = harga - hpp, fc = HPP.foodCost(hpp, harga);
+    pill.hidden = false; pill.className = 'suffix pill sm js-margin ' + (laba < 0 ? 'bad' : HPP.fcClass(fc));
+    pill.textContent = 'Margin ' + m + '%';
+    info.innerHTML = icon(laba < 0 ? 'alert' : 'trending-up', 'xs') + '<span>HPP ' + rp(hpp) + ' · laba <b style="color:' + (laba < 0 ? 'var(--bad)' : 'var(--ok)') + '">' + rp(laba) + '</b>/porsi · food cost ' + Math.round(fc) + '%' + (laba < 0 ? ' — <b style="color:var(--bad)">di bawah HPP, rugi!</b>' : '') + '</span>';
   },
   collect(el) {
     const f = this.f;
@@ -446,7 +462,7 @@ page('produk-form', {
 /* ======================================================= KALKULATOR HPP */
 page('hpp', {
   role: 'OWNER', nav: false, foot: true, backTo: 'produk',
-  st: { pid: '', vars: [], sim: false, ov: { mat: {} }, margins: null, pick: 'standar' },
+  st: { pid: '', vars: [], sim: false, ov: { mat: {} }, margins: null, pick: 'standar', manual: 0 },
   template() {
     return topbar({ back: true, title: 'Kalkulator HPP', sub: 'Analisis harga & margin', right: '<button class="icon-btn soft" data-act="help" type="button" aria-label="Bantuan">' + icon('info', 'sm') + '</button>' }) +
       '<div class="wrap js-body" style="padding-top:14px;max-width:960px"></div>' +
@@ -458,6 +474,20 @@ page('hpp', {
     this.st.pid = pid && Local.product(pid) ? pid : (this.st.pid && Local.product(this.st.pid) ? this.st.pid : ((prods.find((p) => p.tipe_stok === 'RACIK') || prods[0] || {}).produk_id || ''));
     this.resetVars(); this.st.sim = false; this.st.ov = { mat: {} }; this.st.margins = null;
     this.render(el);
+  },
+  /** Perbarui tombol Terapkan + info harga manual tanpa render ulang (fokus input tidak hilang). */
+  paintApply(el, harga) {
+    const c = this.ctx, ap = $('.js-apply', el); ap.hidden = false;
+    const base = Math.max(0, harga - c.varAdd);
+    ap.innerHTML = icon('check', 'sm') + (harga ? 'Terapkan Harga ' + rp(harga) : 'Pilih atau ketik harga');
+    ap.disabled = !harga || base === c.base || harga <= c.varAdd;
+    this.pickHarga = base;
+    const info = $('.js-manual-info', el);
+    if (info) {
+      const h = this.st.manual;
+      if (!h) info.innerHTML = '<div class="m">Margin –</div><div class="l" style="color:var(--muted)">Laba –</div>';
+      else { const laba = h - c.hpp, m = Math.round((laba / h) * 1000) / 10; info.innerHTML = '<div class="m" style="font-weight:700;color:' + (laba < 0 ? 'var(--bad)' : 'var(--text)') + '">Margin ' + m + '%</div><div class="l" style="color:' + (laba < 0 ? 'var(--bad)' : 'var(--ok)') + '">' + (laba < 0 ? 'Rugi ' + rp(-laba) : 'Laba ' + rp(laba)) + '</div>'; }
+    }
   },
   resetVars() {
     const vars = (App.boot.variants || []).filter((v) => v.produk_id === this.st.pid);
@@ -473,7 +503,9 @@ page('hpp', {
     const price = toNum(p.harga_jual) + vars.filter((v) => st.vars.indexOf(v.varian_id) > -1).reduce((s, v) => s + toNum(v.tambahan_harga), 0);
     const round = toNum(App.settings.pembulatan) || 1000, M = this.margins();
     const recs = [['hemat', 'Hemat', M.hemat], ['standar', 'Standar', M.standar], ['premium', 'Premium', M.premium]].map((r) => ({ key: r[0], nama: r[1], m: r[2], harga: HPP.recommend(h.total, r[2], round) }));
-    const pick = recs.find((r) => r.key === st.pick) || recs[1];
+    const varAdd = price - toNum(p.harga_jual);
+    const pick = st.pick === 'manual' ? { key: 'manual', harga: st.manual } : (recs.find((r) => r.key === st.pick) || recs[1]);
+    this.ctx = { hpp: h.total, varAdd, base: toNum(p.harga_jual) };
     const fc = HPP.foodCost(h.total, price), fcc = HPP.fcClass(fc);
     const mats = b.materials || [];
     $('.js-body', el).innerHTML = '<div class="desk-2"><div class="stack">' +
@@ -496,16 +528,20 @@ page('hpp', {
       '<div><div class="label-row" style="margin-top:6px"><span class="sec-title">Rekomendasi harga jual</span><span class="muted" style="font-size:12.5px">Pilih 1 strategi</span></div>' +
       '<div class="rec-grid">' + recs.map((r) => '<button class="rec' + (r.key === pick.key ? ' is-on' : '') + '" data-act="pick" data-k="' + r.key + '" type="button">' + (r.key === 'standar' ? '<span class="rib">DISARANKAN</span>' : '') + '<div class="n">' + r.nama + '</div>' +
         (st.sim ? '<div class="m">Margin <input data-margin="' + r.key + '" value="' + r.m + '" inputmode="numeric" style="width:34px;border:1px solid var(--line);border-radius:6px;text-align:center;font:inherit">%</div>' : '<div class="m">Margin ' + r.m + '%</div>') +
-        '<div class="p">' + rp(r.harga) + '</div><div class="divider" style="margin:6px 8px"></div><div class="l">Laba ' + rp(r.harga - h.total) + '</div></button>').join('') + '</div>' +
-      '<div class="help">Dibulatkan ke atas ' + rp(round) + ' · margin default bisa diubah di Pengaturan</div></div>' +
+        '<div class="p">' + rp(r.harga) + '</div><div class="divider" style="margin:6px 8px"></div><div class="l">Laba ' + rp(r.harga - h.total) + '</div></button>').join('') +
+        '<div class="rec manual' + (pick.key === 'manual' ? ' is-on' : '') + '" data-act="pick" data-k="manual" role="button" tabindex="0"><span class="ico-box" style="flex:none">' + icon('pencil', 'sm') + '</span>' +
+        '<div style="flex:none"><div class="n">Harga manual</div><div class="m">Ketik harga sendiri</div></div>' +
+        '<div class="grow" style="min-width:110px">' + moneyInput('data-manual placeholder="Rp…" aria-label="Harga manual"', st.manual) + '</div>' +
+        '<div class="js-manual-info" style="text-align:right;min-width:92px"></div></div></div>' +
+      '<div class="help">Dibulatkan ke atas ' + rp(round) + ' · margin default bisa diubah di Pengaturan' + (varAdd ? ' · harga di atas termasuk varian terpilih (+' + rp(varAdd) + ')' : '') + '</div></div>' +
       '<div class="card pad"><div class="row between"><span>Harga jual saat ini</span><b class="num">' + rp(price) + '</b></div><div class="row between" style="margin:10px 0 8px"><span>Food cost ' + Math.round(fc) + '%</span><span class="pill ' + fcc + ' sm">' + (fcc === 'ok' ? '≤ 35% sehat' : fcc === 'warn' ? '35–45% waspada' : icon('alert', 'xs') + 'Di atas 45%') + '</span></div>' +
       '<div class="fc-bar"><span class="mk" style="left:' + Math.min(100, fc) + '%"></span></div>' + (price < h.total ? '<div class="banner bad" style="margin-top:12px">' + icon('alert', 'sm') + '<div>Harga jual di bawah HPP — setiap penjualan rugi ' + rp(h.total - price) + '.</div></div>' : '') + '</div>' +
       '<div class="card pad row" style="border-style:dashed"><span class="ico-box">' + icon('sliders', 'sm') + '</span><div class="grow"><b>Mode Simulasi</b><div class="muted" style="font-size:12.5px">Coba ubah harga bahan atau margin tanpa menyimpan</div></div><label class="toggle"><input type="checkbox" data-act-change="sim"' + (st.sim ? ' checked' : '') + '></label></div>' +
       '</div></div><div style="height:12px"></div>';
-    const ap = $('.js-apply', el); ap.hidden = false;
-    ap.innerHTML = icon('check', 'sm') + 'Terapkan Harga ' + rp(pick.harga);
-    ap.disabled = !pick.harga || pick.harga === toNum(p.harga_jual);
-    this.pickHarga = pick.harga;
+    this.paintApply(el, pick.harga);
+    const mi = $('[data-manual]', el);
+    mi.addEventListener('focus', () => { if (this.st.pick !== 'manual') { this.st.pick = 'manual'; $$('.rec', el).forEach((r) => r.classList.toggle('is-on', r.dataset.k === 'manual')); this.paintApply(el, this.st.manual); } });
+    mi.addEventListener('input', () => { this.st.manual = parseMoney(mi.value); this.st.pick = 'manual'; this.paintApply(el, this.st.manual); });
     $$('[data-act-change]', el).forEach((i) => i.addEventListener('change', () => {
       if (i.dataset.actChange === 'pid') { this.st.pid = i.value; this.resetVars(); this.st.ov = { mat: {} }; replaceRoute('hpp/' + i.value); return; }
       if (i.dataset.actChange === 'sim') { this.st.sim = i.checked; if (!i.checked) { this.st.ov = { mat: {} }; this.st.margins = null; } this.render(el); }
@@ -523,12 +559,16 @@ page('hpp', {
       else if (i > -1) this.st.vars.splice(i, 1); else this.st.vars.push(v.varian_id);
       this.render(el);
     },
-    pick(a, e, el) { this.st.pick = a.dataset.k; this.render(el); },
+    pick(a, e, el) {
+      if (a.dataset.k === 'manual') { if (e.target.closest('input')) return; this.st.pick = 'manual'; $$('.rec', el).forEach((r) => r.classList.toggle('is-on', r.dataset.k === 'manual')); this.paintApply(el, this.st.manual); $('[data-manual]', el).focus(); return; }
+      this.st.pick = a.dataset.k; this.render(el);
+    },
     recipe(a, e, el) { openRecipeEditor(this.st.pid, () => this.render(el)); },
     help() { sheet({ title: 'Cara menghitung HPP', body: '<div class="stack" style="font-size:14.5px"><p><b>1. Harga per satuan</b> = harga beli ÷ isi kemasan. Contoh: tepung 1 kg Rp14.000 → Rp14/gram.</p><p><b>2. Biaya bahan</b> = takaran resep × harga per satuan.</p><p><b>3. Alokasi operasional</b> = total biaya bulanan (gas, listrik, sewa, gaji) ÷ total estimasi porsi terjual per bulan.</p><p><b>4. HPP</b> = bahan + kemasan + alokasi operasional.</p><p><b>5. Harga rekomendasi</b> = HPP ÷ (1 − margin), dibulatkan ke atas.</p><p><b>Food cost</b> = HPP ÷ harga jual. Ideal ≤35%.</p></div>' }); },
     async apply(a) {
       const p = Local.product(this.st.pid), harga = this.pickHarga; if (!p || !harga) return;
-      if (!(await confirmDlg({ title: 'Ubah harga ' + p.nama + '?', msg: rp(p.harga_jual) + ' → ' + rp(harga) + '. Harga baru langsung berlaku di semua kasir.', okText: 'Terapkan' }))) return;
+      if (harga < toNum(this.ctx.hpp) - this.ctx.varAdd && !(await confirmDlg({ title: 'Harga di bawah HPP', msg: 'Setiap penjualan akan rugi. Tetap terapkan?', okText: 'Tetap terapkan', danger: true }))) return;
+      if (!(await confirmDlg({ title: 'Ubah harga ' + p.nama + '?', msg: 'Harga dasar ' + rp(p.harga_jual) + ' → ' + rp(harga) + (this.ctx.varAdd ? ' (tanpa tambahan varian)' : '') + '. Harga baru langsung berlaku di semua kasir.', okText: 'Terapkan' }))) return;
       const old = p.harga_jual;
       ownerWrite('applyPrice', { produk_id: p.produk_id, harga }, { apply: () => { p.harga_jual = harga; return () => { p.harga_jual = old; }; }, msg: 'Harga diperbarui' });
     }
@@ -563,7 +603,7 @@ page('bahan', {
   st: { tab: 'bahan' },
   template() { return topbar({ back: true, title: 'Bahan & Biaya', sub: 'Dasar perhitungan HPP' }) + '<div class="wrap" style="padding-top:14px"><div class="seg light js-tabs"></div><div class="js-body" style="margin-top:14px"></div></div>'; },
   init(el) { on('boot', () => { if (App.current === 'bahan') this.render(el); }); },
-  show(el, tab) { if (tab) this.st.tab = tab; this.render(el); },
+  show(el, tab) { if (tab) this.st.tab = tab; this.st.draft = null; this.render(el); },
   render(el) {
     const b = App.boot, tab = this.st.tab;
     $('.js-tabs', el).innerHTML = [['bahan', 'Bahan Baku'], ['biaya', 'Biaya Operasional'], ['estimasi', 'Estimasi Penjualan']].map((t) => '<button class="' + (tab === t[0] ? 'on' : '') + '" data-act="tab" data-t="' + t[0] + '" type="button">' + t[1] + '</button>').join('');
@@ -577,19 +617,78 @@ page('bahan', {
         '<button class="btn primary" data-act="cost" type="button" style="margin-bottom:12px">' + icon('plus', 'sm') + 'Tambah Biaya</button>' +
         ((b.costs || []).length ? '<div class="card" style="padding:0 16px">' + b.costs.map((c) => '<button class="list-item" data-act="cost" data-id="' + esc(c.biaya_id) + '" type="button"><div class="grow t">' + esc(c.nama) + '</div><b class="num">' + rp(c.nominal_per_bulan) + '</b>' + icon('chevron-right', 'sm faint') + '</button>').join('') + '</div>' : emptyState('wallet', 'Belum ada biaya', 'Contoh: gas & listrik, sewa, gaji.'));
     } else {
-      const est = {}; (b.production || []).forEach((p) => { est[p.produk_id] = toNum(p.estimasi_terjual_per_bulan); });
-      const o = HPP.opsPerUnit(b);
-      body.innerHTML = '<div class="banner info" style="margin-bottom:12px">' + icon('info', 'sm') + '<div>Estimasi porsi terjual per bulan dipakai untuk membagi biaya operasional ke setiap porsi. Saat ini: <b>' + rp(o.perUnit) + '/porsi</b> (' + rp(o.total) + ' ÷ ' + fmtNum(o.prod) + ').</div></div>' +
-        '<div class="card" style="padding:0 16px">' + (b.products || []).map((p) => '<div class="list-item"><div class="thumb">' + productImg(p) + '</div><div class="grow t ellipsis">' + esc(p.nama) + '</div><input class="input" data-est="' + esc(p.produk_id) + '" inputmode="numeric" value="' + (est[p.produk_id] || '') + '" placeholder="0" style="width:110px;text-align:right"><span class="muted" style="font-size:12px">/bln</span></div>').join('') + '</div>' +
-        '<button class="btn primary block lg" data-act="saveest" type="button" style="margin-top:14px">' + icon('check', 'sm') + 'Simpan Estimasi</button>';
+      this.renderEstimasi(body);
     }
+  },
+  /** Tab Estimasi Penjualan — dengan penjelasan & hitungan langsung. */
+  renderEstimasi(body) {
+    const b = App.boot, st = this.st;
+    if (!st.estMode) st.estMode = 'bulan';
+    if (!st.days) st.days = 30;
+    const est = {}; (st.draft || b.production || []).forEach((p) => { est[p.produk_id] = toNum(p.estimasi_terjual_per_bulan); });
+    const totalCost = (b.costs || []).reduce((sum, c) => sum + toNum(c.nominal_per_bulan), 0);
+    const perDay = st.estMode === 'hari';
+    const ex = (b.products || []).find((p) => p.tipe_stok === 'RACIK') || (b.products || [])[0];
+    body.innerHTML =
+      '<div class="explain"><b>Apa itu estimasi penjualan?</b> Perkiraan <b>berapa porsi/pcs setiap produk terjual dalam 1 bulan</b>. Tidak harus tepat — cukup perkiraan wajar.' +
+      '<br><br><b>Untuk apa?</b> Biaya operasional bulanan Anda (gas, listrik, sewa, gaji, dll. = <b>' + rp(totalCost) + '</b>/bulan) harus "ditanggung" oleh semua porsi yang terjual. Aplikasi membaginya rata ke setiap porsi, lalu menambahkannya ke HPP:' +
+      '<div class="formula"><span>Biaya operasional/bulan</span><span class="eq">÷</span><span>Total porsi terjual/bulan</span><span class="eq">=</span><span class="res">Biaya operasional per porsi</span></div>' +
+      '<ol><li><b>Semakin laris</b> (porsi makin banyak) → beban per porsi makin <b>kecil</b> → HPP turun.</li>' +
+      '<li><b>Estimasi terlalu tinggi</b> → HPP terlihat murah padahal tidak → harga jual bisa terlalu rendah. Lebih aman isi angka yang <b>sedikit konservatif</b>.</li>' +
+      '<li><b>Cara mudah mengisi:</b> perkirakan laku per hari × jumlah hari buka. Contoh: ' + esc(ex ? ex.nama : 'Kopi Susu') + ' laku ±30 cup/hari × 30 hari = <b>900</b> per bulan. Pilih mode <b>"Per hari"</b> di bawah agar aplikasi yang mengalikan.</li>' +
+      '<li>Sudah ada penjualan? Tekan <b>Isi dari penjualan nyata</b> — aplikasi mengambil rata-rata 30 hari terakhir.</li></ol></div>' +
+      '<div class="card pad" style="margin-top:12px"><div class="row wrapx" style="gap:10px"><div class="seg light" style="width:auto;flex:1;min-width:220px"><button data-act="estmode" data-v="bulan" type="button" class="' + (!perDay ? 'on' : '') + '">Isi per bulan</button><button data-act="estmode" data-v="hari" type="button" class="' + (perDay ? 'on' : '') + '">Isi per hari</button></div>' +
+      (perDay ? '<label class="row" style="gap:8px;font-size:13.5px;font-weight:600">Hari buka/bulan<input class="input js-days" inputmode="numeric" value="' + st.days + '" style="width:70px;min-height:40px;text-align:center"></label>' : '') +
+      '<button class="btn outline sm" data-act="estreal" type="button">' + icon('history', 'sm') + 'Isi dari penjualan nyata</button></div></div>' +
+      '<div class="card" style="padding:0 16px;margin-top:12px">' + (b.products || []).map((p) => {
+        const m = est[p.produk_id] || 0, v = perDay ? (m ? Math.round((m / st.days) * 10) / 10 : '') : (m || '');
+        return '<div class="list-item"><div class="thumb">' + productImg(p) + '</div><div class="grow" style="min-width:0"><div class="t ellipsis">' + esc(p.nama) + '</div><div class="s js-est-note" data-pid="' + esc(p.produk_id) + '"></div></div>' +
+          '<input class="input" data-est="' + esc(p.produk_id) + '" inputmode="decimal" value="' + v + '" placeholder="0" style="width:96px;text-align:right"><span class="muted" style="font-size:12px;width:34px">' + (perDay ? '/hari' : '/bln') + '</span></div>';
+      }).join('') + '</div>' +
+      '<div class="card pad" style="margin-top:12px"><span class="sec-title"><span class="bullet"></span>Hasil perhitungan</span><div class="formula js-est-formula"></div><div class="help js-est-help"></div></div>' +
+      '<button class="btn primary block lg" data-act="saveest" type="button" style="margin-top:14px">' + icon('check', 'sm') + 'Simpan Estimasi</button>';
+    const calc = () => {
+      const days = Math.max(1, toNum(($('.js-days', body) || {}).value) || st.days); if (perDay) st.days = days;
+      let prod = 0;
+      $$('[data-est]', body).forEach((i) => {
+        const n = toNum(String(i.value).replace(',', '.')), month = perDay ? Math.round(n * days) : Math.round(n);
+        prod += month;
+        const note = $('.js-est-note[data-pid="' + i.dataset.est + '"]', body);
+        note.textContent = month ? (perDay ? '≈ ' + fmtNum(month) + ' porsi/bulan' : '≈ ' + fmtNum(Math.round((month / 30) * 10) / 10) + ' porsi/hari') : 'Belum diisi';
+      });
+      const per = prod ? totalCost / prod : 0;
+      $('.js-est-formula', body).innerHTML = '<span>' + rp(totalCost) + '</span><span class="eq">÷</span><span>' + fmtNum(prod) + ' porsi</span><span class="eq">=</span><span class="res">' + (prod ? rp(per) + ' / porsi' : '–') + '</span>';
+      $('.js-est-help', body).innerHTML = icon('info', 'xs') + (prod ? 'Setiap porsi menanggung ' + rp(per) + ' biaya operasional. Angka ini otomatis masuk ke HPP semua produk.' : 'Isi minimal satu produk agar biaya operasional bisa dibagi.') + ' <a class="link-btn" href="#/bahan/biaya" style="font-size:13px">Ubah biaya →</a>';
+      this.estValues = () => $$('[data-est]', body).map((i) => ({ produk_id: i.dataset.est, estimasi_terjual_per_bulan: perDay ? Math.round(toNum(String(i.value).replace(',', '.')) * days) : Math.round(toNum(String(i.value).replace(',', '.'))) })).filter((r) => r.estimasi_terjual_per_bulan > 0);
+    };
+    body.oninput = (e) => { if (e.target.matches('[data-est], .js-days')) calc(); };
+    calc();
   },
   actions: {
     tab(a, e, el) { this.st.tab = a.dataset.t; this.render(el); },
+    estmode(a, e, el) {
+      // simpan isian saat ini ke data lokal sebelum ganti mode supaya angka tidak hilang
+      const rows = this.estValues ? this.estValues() : null; if (rows) this.st.draft = rows;
+      this.st.estMode = a.dataset.v; this.render(el);
+    },
+    async estreal(a, e, el) {
+      if (!navigator.onLine) { toast('Butuh internet untuk membaca data penjualan.', 'warn'); return; }
+      busy(a, true);
+      const r = await api('getReport', { from: daysAgo(29).toISOString(), to: endOfDay(new Date()).toISOString() });
+      busy(a, false);
+      if (!r.ok) { toast(r.error, 'bad'); return; }
+      const days = Math.max(1, (r.data.byDay || []).length);
+      if (!(r.data.byProduct || []).length) { toast('Belum ada penjualan 30 hari terakhir.', 'warn'); return; }
+      const factor = 30 / days;
+      this.st.draft = (r.data.byProduct || []).filter((x) => x.produk_id).map((x) => ({ produk_id: x.produk_id, estimasi_terjual_per_bulan: Math.round(x.qty * factor) }));
+      this.st.estMode = 'bulan'; this.render(el);
+      toast('Diisi dari ' + days + ' hari berjualan (rata-rata × 30). Periksa lalu Simpan.', 'ok', 4500);
+    },
     mat(a, e, el) { openMaterialForm(a.dataset.id); },
     cost(a, e, el) { openCostForm(a.dataset.id); },
     saveest(a, e, el) {
-      const rows = $$('[data-est]', el).map((i) => ({ produk_id: i.dataset.est, estimasi_terjual_per_bulan: toNum(i.value) })).filter((r) => r.estimasi_terjual_per_bulan > 0);
+      const rows = this.estValues ? this.estValues() : [];
+      this.st.draft = null;
       ownerWrite('saveProduction', { rows }, { apply: () => { const old = App.boot.production; App.boot.production = rows; return () => { App.boot.production = old; }; }, msg: 'Estimasi disimpan' });
     }
   }
@@ -762,7 +861,7 @@ page('pengaturan', {
     const logo = this.logo || (!this.hapusLogo && s.logo_url);
     $('.js-body', el).innerHTML = '<div class="desk-2"><div class="stack">' +
       '<div class="card pad"><span class="sec-title"><span class="bullet"></span>Identitas toko</span>' + f('nama_toko', 'Nama brand / toko', 'Toko Roti Visena') + f('tagline', 'Tagline (untuk menu & poster)', 'Fresh from the oven setiap hari') + f('alamat', 'Alamat', 'Jl. …') + f('no_wa', 'No. WhatsApp toko', '08xxxxxxxxxx', 'tel') + f('email_owner', 'Email penerima laporan', 'nama@gmail.com', 'email') + '</div>' +
-      '<div class="card pad"><span class="sec-title"><span class="bullet"></span>Logo</span><div class="row" style="margin-top:12px"><div class="logo md">' + (logo ? '<img src="' + esc(logo) + '" alt="">' : esc((s.nama_toko || 'Q').charAt(0))) + '</div><div class="grow muted" style="font-size:13px">PNG/JPG, otomatis dikompres. Tampil di aplikasi, struk, menu & poster.</div></div>' +
+      '<div class="card pad"><span class="sec-title"><span class="bullet"></span>Logo</span><div class="row" style="margin-top:12px"><div class="logo md">' + (logo ? '<img src="' + esc(logo) + '" alt="">' : esc((s.nama_toko || 'Q').charAt(0))) + '</div><div class="grow muted" style="font-size:13px">PNG/JPG. Otomatis dijadikan <b>persegi 1:1</b> (512×512) & dikompres — sama persis dengan tampilan di aplikasi, struk, menu & poster.</div></div>' +
       '<div class="grid-2" style="margin-top:12px"><button class="btn outline" data-act="logo" type="button">' + icon('upload', 'sm') + 'Unggah Logo</button><button class="btn outline" data-act="nologo" type="button"' + (logo ? '' : ' disabled') + '>' + icon('trash', 'sm') + 'Hapus</button></div></div>' +
       '<div class="card pad"><span class="sec-title"><span class="bullet"></span>Warna tema aplikasi</span><div class="field"><span class="lbl">Warna utama</span><div class="row wrapx" style="gap:10px">' + COLOR_PRESETS.map((c) => '<button class="swatch' + (String(s.warna_primer).toUpperCase() === c ? ' on' : '') + '" style="background:' + c + '" data-act="color" data-c="' + c + '" type="button" aria-label="' + c + '"></button>').join('') + '<label class="swatch" style="background:conic-gradient(red,yellow,lime,aqua,blue,magenta,red);position:relative" title="Pilih warna lain"><input type="color" data-k="warna_primer" value="' + esc(s.warna_primer || '#F26B1D') + '" style="opacity:0;position:absolute;inset:0;width:100%;height:100%"></label></div></div>' +
       '<div class="field"><span class="lbl">Warna aksen</span><input type="color" data-k="warna_aksen" value="' + esc(s.warna_aksen || '#16A34A') + '" style="width:64px;height:40px;border:1px solid var(--line);border-radius:10px;background:#fff"></div>' +
@@ -780,7 +879,23 @@ page('pengaturan', {
   collect(el) { $$('[data-k]', el).forEach((i) => { this.s[i.dataset.k] = i.type === 'checkbox' ? (i.checked ? 'TRUE' : 'FALSE') : i.value.trim(); }); },
   actions: {
     color(a, e, el) { this.collect(el); this.s.warna_primer = a.dataset.c; applyTheme(this.s); this.render(el); },
-    async logo(a, e, el) { this.collect(el); const f = await pickImage(false); if (!f) return; this.logo = await compressImage(f, { maxDim: 512, maxBytes: 200 * 1024, type: 'image/png', square: false }); this.hapusLogo = false; this.render(el); },
+    async logo(a, e, el) {
+      this.collect(el);
+      const f = await pickFile(false); if (!f) return;
+      busy(a, true);
+      let crop, fit;
+      try {
+        [crop, fit] = await Promise.all([
+          compressImage(f, { maxDim: 512, maxBytes: 200 * 1024, type: 'image/png', square: true }),
+          compressImage(f, { maxDim: 512, maxBytes: 200 * 1024, type: 'image/png', fit: true })
+        ]);
+      } catch (err) { busy(a, false); toast(err.message, 'bad'); return; }
+      busy(a, false);
+      const choice = await chooseLogoShape(crop, fit);
+      if (!choice) return;
+      this.logo = choice; this.hapusLogo = false; this.render(el);
+      toast('Logo 1:1 siap (' + dataUrlKB(choice) + ' KB). Tekan Simpan Pengaturan.', 'ok', 2500);
+    },
     nologo(a, e, el) { this.collect(el); this.logo = null; this.hapusLogo = true; this.render(el); },
     async save(a, e, el) {
       this.collect(el);
@@ -797,6 +912,26 @@ page('pengaturan', {
     }
   }
 });
+
+/** Pilih bentuk logo 1:1: potong tengah (penuh) atau utuh (diberi ruang). */
+function chooseLogoShape(crop, fit) {
+  return new Promise((resolve) => {
+    let picked = crop, done = false;
+    const card = (src, k, t, d) => '<button class="pick-card" data-k="' + k + '" type="button" style="width:auto;flex:1;text-align:center;padding:12px"><span class="ck">' + icon('check', 'xs') + '</span>' +
+      '<div class="logo lg" style="margin:6px auto 10px;width:110px;height:110px"><img src="' + src + '" alt=""></div><div class="nm" style="white-space:normal">' + t + '</div><div class="muted" style="font-size:12px">' + d + '</div></button>';
+    const s = sheet({
+      title: 'Atur Logo 1:1',
+      body: '<div class="row" style="gap:10px;align-items:stretch">' + card(crop, 'crop', 'Penuhi kotak', 'Bagian tengah dipotong — cocok untuk logo bulat/persegi') + card(fit, 'fit', 'Logo utuh', 'Tidak ada yang terpotong — cocok untuk logo memanjang') + '</div>' +
+        '<div class="help" style="justify-content:center">' + icon('info', 'xs') + 'Begini logo tampil di aplikasi, struk & menu.</div>',
+      foot: '<button class="btn primary block lg" id="lgUse" type="button">' + icon('check', 'sm') + 'Pakai Logo Ini</button>',
+      onClose() { if (!done) resolve(null); }
+    });
+    const paint = () => $$('[data-k]', s.el).forEach((b) => b.classList.toggle('is-on', (b.dataset.k === 'crop' ? crop : fit) === picked));
+    s.el.addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b) { picked = b.dataset.k === 'crop' ? crop : fit; paint(); } });
+    $('#lgUse', s.el).onclick = () => { done = true; s.close(); resolve(picked); };
+    paint();
+  });
+}
 
 /* ======================================================= PERLU DITINJAU */
 page('tinjau', {

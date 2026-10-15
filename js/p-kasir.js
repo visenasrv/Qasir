@@ -148,6 +148,23 @@ page('kasir', {
   init(el) {
     const q = $('.js-q', el);
     q.addEventListener('input', debounce(() => { this.state.q = q.value.trim().toLowerCase(); this.renderGrid(el); }, 90));
+    // Alat scan barcode USB/Bluetooth (mengetik kode + Enter) → langsung masuk keranjang dengan bunyi bip
+    q.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      const p = findByBarcode(q.value); if (!p) return;
+      e.preventDefault();
+      const r = addProductFlow(p, true);
+      if (r === 'added') { Scanner.tone(true); flashCard(el, p.produk_id); toast(p.nama + ' ditambahkan', 'ok', 1100); }
+      else if (r !== 'variant') { Scanner.tone(false); toast(p.nama + (r === 'habis' ? ' habis' : ' — stok tidak cukup'), 'warn'); }
+      q.value = ''; this.state.q = ''; this.renderGrid(el);
+    });
+    let buf = '', lastKey = 0;
+    document.addEventListener('keydown', (e) => {
+      if (App.current !== 'kasir' || _sheets.length || /INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '')) return;
+      const now = Date.now();
+      if (e.key === 'Enter') { if (buf.length >= 4 && now - lastKey < 80) { q.value = buf; q.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })); } buf = ''; return; }
+      if (e.key.length === 1) { buf = now - lastKey > 80 ? e.key : buf + e.key; lastKey = now; }
+    });
     on('cart', () => { if (App.current === 'kasir') { this.refreshCards(el); this.renderCart(el); } });
     on('boot', () => { if (App.current === 'kasir') this.show(el); });
     on('store', () => this.renderBanner(el));
@@ -213,7 +230,18 @@ page('kasir', {
     cat(a, e, el) { this.state.cat = a.dataset.id; this.renderCats(el); this.renderGrid(el); },
     tap(a) { const p = Local.product(a.dataset.pid); if (!p) return; addProductFlow(p); },
     dec(a) { const l = Cart.lines.find((x) => x.produk_id === a.dataset.pid && !x.varian.length && !x.catatan) || Cart.lines.filter((x) => x.produk_id === a.dataset.pid).pop(); if (l) Cart.setQty(l.key, l.qty - 1); },
-    scan() { Scanner.open((code) => { const p = (App.boot.products || []).find((x) => String(x.kode_barcode) === code); if (!p) { toast('Barcode ' + code + ' tidak terdaftar', 'warn'); return false; } addProductFlow(p, true); return !productHasOptions(p.produk_id) ? false : true; }); },
+    scan(a, e, el) {
+      Scanner.open((code) => {
+        const p = findByBarcode(code);
+        if (!p) return { error: 'Barcode tidak terdaftar' };
+        const r = addProductFlow(p, true);
+        if (r === 'habis') return { error: p.nama + ' — stok habis' };
+        if (r === 'fail') return { error: p.nama + ' — stok tidak cukup' };
+        if (r === 'variant') return { label: p.nama, sub: 'Pilih varian…', close: true };
+        flashCard(el, p.produk_id);
+        return { label: p.nama + ' ditambahkan', sub: 'Di keranjang: ' + Cart.qtyOf(p.produk_id) + ' · Total ' + rp(Cart.totals().total) };
+      });
+    },
     'cart-open'() { if (window.matchMedia('(min-width:1024px)').matches) go('bayar'); else openCartSheet(); },
     bayar() { go('bayar'); },
     disc() { openDiscountSheet(); },
@@ -226,9 +254,17 @@ page('kasir', {
 });
 
 function addProductFlow(p, fromScan) {
-  if (isHabis(p)) { toast(p.nama + ' habis', 'warn'); return; }
-  if (productHasOptions(p.produk_id)) { openVariantSheet(p); return; }
-  if (Cart.add(p, [], 1, '') && fromScan) toast(p.nama + ' ditambahkan', 'ok', 1200);
+  if (isHabis(p)) { if (!fromScan) toast(p.nama + ' habis', 'warn'); return 'habis'; }
+  if (productHasOptions(p.produk_id)) { openVariantSheet(p); return 'variant'; }
+  return Cart.add(p, [], 1, '') ? 'added' : 'fail';
+}
+function findByBarcode(code) { code = String(code || '').trim().toLowerCase(); return code ? (App.boot.products || []).find((x) => String(x.kode_barcode).toLowerCase() === code) : null; }
+/** Sorot kartu produk & keranjang setelah scan — kasir langsung tahu barang masuk. */
+function flashCard(el, pid) {
+  const pg = el || $('.page[data-page="kasir"]'); if (!pg) return;
+  const card = $('.pcard[data-pid="' + pid + '"]', pg);
+  if (card) { card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash'); }
+  ['.js-cartbar', '.js-cart-panel'].forEach((sel) => { const b = $(sel, pg); if (b) { b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); } });
 }
 async function clearCartConfirm() { if (await confirmDlg({ title: 'Kosongkan keranjang?', okText: 'Kosongkan', danger: true })) { Cart.clear(); closeAllSheets(); } }
 
@@ -530,20 +566,21 @@ page('sukses', {
       '<div class="js-printer"></div>' +
       '<div class="stack" style="margin-top:12px">' +
       '<button class="btn primary block lg" data-act="print" type="button">' + icon('printer', 'sm') + 'Cetak Struk</button>' +
-      '<div class="grid-2"><button class="btn outline" data-act="wa" type="button">' + icon('whatsapp', 'sm') + 'Kirim WA</button><button class="btn outline" data-act="img" type="button">' + icon('download', 'sm') + 'Simpan Gambar</button></div>' +
+      '<div class="grid-3" style="gap:8px"><button class="btn outline" data-act="wa" type="button">' + icon('whatsapp', 'sm') + 'WA</button><button class="btn outline" data-act="img" type="button">' + icon('image', 'sm') + 'Gambar</button><button class="btn outline" data-act="pdf" type="button">' + icon('file', 'sm') + 'PDF</button></div>' +
       '<button class="btn outline block lg" data-act="new" type="button" style="border:1.5px solid var(--text)">' + icon('plus', 'sm') + 'Transaksi Baru</button></div><div style="height:24px"></div>';
     this.renderPrinter(el);
   },
   renderPrinter(el) {
     const box = $('.js-printer', el); if (!box) return;
-    if (!Printer.supported()) { box.innerHTML = '<div class="banner info">' + icon('info', 'sm') + '<div>Browser ini tidak mendukung printer Bluetooth (mis. iPhone). Gunakan <b>Simpan Gambar</b> atau <b>Kirim WA</b>.</div></div>'; return; }
+    if (!Printer.supported()) { box.innerHTML = '<div class="banner info">' + icon('info', 'sm') + '<div>Browser ini tidak mendukung printer Bluetooth (mis. iPhone). Gunakan tombol <b>Gambar</b>, <b>PDF</b> atau <b>WA</b>.</div></div>'; return; }
     const sv = Printer.saved(), stt = Printer.status();
     box.innerHTML = '<div class="card pad row"><span class="ico-box info">' + icon('bluetooth', 'sm') + '</span><div class="grow"><div class="t" style="font-weight:700">' + esc(sv ? sv.name : 'Belum ada printer') + ' <span class="pill ' + (stt === 'connected' ? 'ok' : 'neutral') + ' sm">' + (stt === 'connected' ? 'Terhubung' : sv ? 'Tersimpan' : 'Belum') + '</span></div><div class="muted" style="font-size:12.5px">Thermal Bluetooth ESC/POS · ' + (App.settings.ukuran_kertas || '58') + 'mm</div></div><button class="link-btn" data-act="printer" type="button">' + (sv ? 'Ganti' : 'Hubungkan') + '</button></div>';
   },
   actions: {
     print() { Printer.printTx(this.tx); },
     wa() { Receipt.sendWA(this.tx, this.tx.pelanggan_id ? ((App.boot.customers || []).find((c) => c.pelanggan_id === this.tx.pelanggan_id) || {}).no_hp : ''); },
-    img() { Receipt.saveImage(this.tx); },
+    img(a) { runExport(a, () => Receipt.saveImage(this.tx)); },
+    pdf(a) { runExport(a, () => Receipt.savePdf(this.tx)); },
     new() { replaceRoute('kasir'); },
     async printer() { try { const n = await Printer.connect(true); toast('Terhubung ke ' + n, 'ok'); } catch (e) { if (e.name !== 'NotFoundError') toast(e.message, 'bad'); } }
   }

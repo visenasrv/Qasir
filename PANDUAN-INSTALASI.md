@@ -1,4 +1,4 @@
-# 📋 Panduan Instalasi — Qasir (Aplikasi Kasir UMKM)
+# 📋 Panduan Instalasi — Qasir v1.1 (Aplikasi Kasir UMKM)
 
 Qasir terdiri dari dua bagian:
 
@@ -10,6 +10,8 @@ Qasir terdiri dari dua bagian:
 Urutan wajib: **Backend dulu → dapat URL `/exec` → isi ke frontend → upload frontend ke GitHub Pages.**
 
 Waktu yang dibutuhkan: ± 30–45 menit untuk pertama kali.
+
+> **Sudah memasang v1.0?** Langsung ke [Bagian G — Update dari v1.0 ke v1.1](#bagian-g--update-dari-v10-ke-v11).
 
 ---
 
@@ -219,6 +221,10 @@ Tanda berhasil: muncul `Writing objects: 100%` dan `* [new branch] main -> main`
 | Email laporan tidak masuk | Email owner kosong / masuk spam | Isi di Pengaturan; cek folder Spam; jalankan `testIzin` |
 | Tampil versi lama setelah update | Cache | Naikkan `VERSION` di `sw.js`, tutup-buka aplikasi |
 | *"Sesi berakhir"* | Token 8 jam habis | Masukkan PIN di dialog yang muncul; data offline tetap aman |
+| Kamera laptop tidak terbuka / *"Izin kamera ditolak"* | Browser memblokir kamera | Klik ikon 🔒 di address bar → Kamera: **Izinkan** → coba lagi. Tutup Zoom/Meet yang sedang memakai webcam |
+| Tidak ada bunyi saat scan | Volume HP/laptop mati atau mode senyap | Naikkan volume media. Getar & animasi hijau tetap muncul sebagai tanda |
+| Tombol **Salin** gambar poster gagal | Browser lama / bukan Chrome | Pakai Chrome atau Edge terbaru, atau tekan tombol ⬇ Unduh di sebelahnya |
+| Gambar/PDF gagal dibuat saat offline | Modul ekspor belum pernah dimuat | Simpan gambar/PDF sekali saat online; setelah itu bisa dipakai offline |
 
 ---
 
@@ -228,3 +234,37 @@ Tanda berhasil: muncul `Writing objects: 100%` dan `* [new branch] main -> main`
 |---|---|---|
 | Pemilik (Owner) | `owner` | `123456` |
 | Kasir | `kasir1` | `111111` |
+
+---
+
+## BAGIAN G — Update dari v1.0 ke v1.1
+
+Data Anda (produk, transaksi, pengaturan) **tidak berubah** — cukup ganti kodenya.
+
+**1. Backend:**
+1. Buka proyek Apps Script → file **Kode** → hapus semua isinya → tempel **`Kode.gs` v1.1** → **Ctrl+S**.
+2. **Deploy → Manage deployments** → ✏️ → **Version: New version** → **Deploy**. URL `/exec` tetap sama.
+3. ⚠️ **Jangan** menjalankan `setupAppEnvironment` lagi.
+
+**2. Frontend:**
+1. Ekstrak `qasir.zip` v1.1 ke folder baru.
+2. **Salin `js/config.js` lama Anda** (yang sudah berisi URL `/exec`) dan timpa `js/config.js` di folder baru — atau isi ulang `GAS_URL`.
+3. Salin **seluruh isi** folder baru ke folder `qasir` lama Anda (timpa semua file). Pastikan folder `.git` di folder lama tidak ikut terhapus.
+4. Dari folder `qasir`:
+   ```bash
+   git add .
+   git commit -m "Update Qasir v1.1"
+   git push
+   ```
+5. Tunggu 1–2 menit. Di HP/laptop kasir, tutup aplikasi lalu buka lagi — versi baru otomatis terpasang (versi sudah dinaikkan ke `qasir-v1.1.0` di `sw.js`).
+
+**Yang baru di v1.1:**
+- Scan barcode berbunyi "bip" + getar + animasi hijau (berhasil) / merah (tidak terdaftar), plus keterangan produk & isi keranjang. Alat scan USB/Bluetooth juga didukung lewat kolom cari.
+- Logo otomatis 1:1 dengan pilihan **Penuhi kotak** atau **Logo utuh**.
+- Transaksi yang dibatalkan bisa **dihapus permanen** oleh pemilik (perbaikan galat "transaksi tidak ditemukan").
+- Struk, Daftar Menu & Laporan → **Gambar/PDF langsung tersimpan** ke folder Unduhan, sama persis dengan tampilan aplikasi (termasuk logo & foto).
+- Kalkulator HPP: opsi **Harga manual** dengan margin & laba langsung terlihat.
+- Prompt Poster: **Salin** logo & foto produk langsung (tempel di Gemini/ChatGPT), ukuran **Landscape 16:9** & **A4 Landscape**.
+- Form produk: margin berubah langsung saat harga diketik.
+- Estimasi Penjualan: penjelasan lengkap, mode isi **per hari**, hitungan langsung, dan **Isi dari penjualan nyata**.
+- Kamera di laptop membuka **webcam** (bukan file manager); di HP tetap kamera HP.

@@ -51,8 +51,21 @@ page('transaksi', {
     const r = this.range();
     $('.js-list-title', el).textContent = 'Daftar nota ' + r.label;
     await this.loadLocal(el);
-    swr('tx:' + this.st.range + ':' + ymd(new Date()), 'getTransactions', { from: r.from.toISOString(), to: r.to.toISOString() }, (d) => { this.server = (d.list || []).map(normalizeTx); this.render(el); },
+    swr('tx:' + this.st.range + ':' + ymd(new Date()), 'getTransactions', { from: r.from.toISOString(), to: r.to.toISOString() }, (d, cached) => {
+      this.server = (d.list || []).map(normalizeTx);
+      if (!cached) this.prune(el);
+      this.render(el);
+    },
       { fresh: 20000, onError: (e) => { if (!this.local.length) $('.js-list', el).innerHTML = retryBox(e.error); } });
+  },
+  /** Hapus salinan lokal transaksi yang sudah tersinkron tapi tidak ada lagi di server (dihapus permanen oleh pemilik). */
+  async prune(el) {
+    const ids = new Set(this.server.map((t) => t.transaksi_id)), old = Date.now() - 5 * 60e3;
+    const gone = this.local.filter((t) => t._sync === 'OK' && t._cancelSync !== 'PENDING' && !ids.has(t.transaksi_id) && new Date(t.waktu).getTime() < old && (App.isOwner || t.kasir_id === App.user.user_id));
+    if (!gone.length) return;
+    for (const t of gone) await DB.del('tx', t.transaksi_id).catch(() => {});
+    this.local = this.local.filter((t) => gone.indexOf(t) < 0);
+    this.render(el);
   },
   merged() {
     const map = new Map();
@@ -115,9 +128,11 @@ function openTxDetail(t) {
       Receipt.html(t) + '<div style="height:18px"></div>' +
       '<div class="js-proof"></div>' +
       (App.isOwner && t.total_hpp ? '<div class="card pad" style="margin-top:12px"><div class="sum-row"><span class="muted">HPP</span><span class="v">' + rp(t.total_hpp) + '</span></div><div class="sum-row"><span class="muted">Laba kotor</span><span class="v" style="color:var(--ok)">' + rp(toNum(t.total) - toNum(t.total_hpp)) + '</span></div></div>' : ''),
-    foot: '<div class="grid-3" style="gap:8px"><button class="btn outline sm" data-a="print" type="button">' + icon('printer', 'sm') + 'Cetak</button><button class="btn outline sm" data-a="wa" type="button">' + icon('whatsapp', 'sm') + 'WA</button><button class="btn outline sm" data-a="img" type="button">' + icon('download', 'sm') + 'Gambar</button></div>' +
+    foot: '<div class="row" style="gap:8px"><button class="btn outline sm grow" data-a="print" type="button">' + icon('printer', 'sm') + 'Cetak</button><button class="btn outline sm grow" data-a="wa" type="button">' + icon('whatsapp', 'sm') + 'WA</button><button class="btn outline sm grow" data-a="img" type="button">' + icon('image', 'sm') + 'Gambar</button><button class="btn outline sm grow" data-a="pdf" type="button">' + icon('file', 'sm') + 'PDF</button></div>' +
       (canCancel ? '<button class="btn danger block" data-a="cancel" type="button" style="margin-top:8px">' + icon('x', 'sm') + 'Batalkan Transaksi</button>' : '') +
-      (App.isOwner && t.status === 'DIBATALKAN' && !t._local && t._cancelSync !== 'PENDING' ? '<button class="btn outline block sm" data-a="delete" type="button" style="margin-top:8px;color:var(--bad)">' + icon('trash', 'sm') + 'Hapus Permanen</button>' : '')
+      (App.isOwner && t.status === 'DIBATALKAN' ? (t._sync === 'PENDING' || t._sync === 'REJECT' || t._cancelSync === 'PENDING'
+        ? '<div class="help" style="justify-content:center;margin-top:8px">' + icon('clock', 'xs') + 'Hapus permanen tersedia setelah transaksi & pembatalannya tersinkron.</div>'
+        : '<button class="btn outline block sm" data-a="delete" type="button" style="margin-top:8px;color:var(--bad)">' + icon('trash', 'sm') + 'Hapus Permanen</button>') : '')
   });
   const proofBox = $('.js-proof', s.el);
   (async () => {
@@ -130,18 +145,29 @@ function openTxDetail(t) {
     const a = b.dataset.a;
     if (a === 'print') Printer.printTx(t);
     else if (a === 'wa') Receipt.sendWA(t, t.pelanggan_id ? ((App.boot.customers || []).find((c) => c.pelanggan_id === t.pelanggan_id) || {}).no_hp : '');
-    else if (a === 'img') Receipt.saveImage(t);
+    else if (a === 'img') runExport(b, () => Receipt.saveImage(t));
+    else if (a === 'pdf') runExport(b, () => Receipt.savePdf(t));
     else if (a === 'proof') {
       busy(b, true); const r = await api('getProof', { file_id: t.bukti_file_id }); busy(b, false);
       if (r.ok) proofBox.innerHTML = '<img src="' + r.data.dataUrl + '" style="border-radius:12px" alt="Bukti bayar">'; else toast(r.error, 'bad');
     } else if (a === 'cancel') { if (await cancelTx(t)) s.close(); }
     else if (a === 'delete') {
       if (!(await confirmDlg({ title: 'Hapus permanen?', msg: 'Transaksi ' + t.no_nota + ' akan dihapus dari database dan tidak bisa dikembalikan.', okText: 'Hapus', danger: true }))) return;
+      if (!navigator.onLine) { toast('Hapus permanen butuh koneksi internet.', 'warn'); return; }
       busy(b, true); const r = await api('deleteTransaction', { transaksi_id: t.transaksi_id }); busy(b, false);
-      if (r.ok) { toast('Transaksi dihapus', 'ok'); s.close(); Object.keys(localStorage).filter((k) => k.indexOf(LS_PREFIX + userKey('tx:')) === 0).forEach((k) => localStorage.removeItem(k)); if (App.current === 'transaksi') Pages.transaksi.load($('.page[data-page="transaksi"]')); }
+      if (r.ok) { s.close(); await forgetTx(t.transaksi_id); toast('Transaksi ' + t.no_nota + ' dihapus permanen', 'ok'); }
       else toast(r.error, 'bad');
     }
   });
+}
+/** Bersihkan transaksi dari perangkat ini: salinan lokal, bukti, cache daftar/dashboard/laporan. */
+async function forgetTx(id) {
+  await DB.del('tx', id).catch(() => {}); await DB.del('proofs', id).catch(() => {});
+  const pre = LS_PREFIX + userKey('');
+  Object.keys(localStorage).filter((k) => k.indexOf(pre) === 0 && /:(tx|dash|rep):/.test(':' + k.slice(pre.length))).forEach((k) => localStorage.removeItem(k));
+  const pg = Pages.transaksi, el = $('.page[data-page="transaksi"]');
+  pg.server = pg.server.filter((x) => x.transaksi_id !== id); pg.local = pg.local.filter((x) => x.transaksi_id !== id);
+  if (el) { pg.render(el); if (App.current === 'transaksi') pg.load(el); }
 }
 async function cancelTx(t) {
   const localRec = await DB.get('tx', t.transaksi_id);

@@ -33,23 +33,73 @@ const Code128 = {
 };
 
 const Scanner = {
-  stream: null, timer: null, h5: null,
-  beep() {
-    try { navigator.vibrate && navigator.vibrate(60); const ac = new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(); const g = ac.createGain(); o.frequency.value = 1500; g.gain.value = 0.08; o.connect(g); g.connect(ac.destination); o.start(); setTimeout(() => { o.stop(); ac.close(); }, 90); } catch (e) {}
+  stream: null, timer: null, h5: null, ac: null,
+  /** Siapkan audio saat kasir menekan tombol Scan (browser hanya mengizinkan suara setelah sentuhan). */
+  unlockAudio() {
+    try {
+      if (!this.ac) this.ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (this.ac.state === 'suspended') this.ac.resume();
+      const b = this.ac.createBuffer(1, 1, 22050), src = this.ac.createBufferSource(); src.buffer = b; src.connect(this.ac.destination); src.start(0);
+    } catch (e) {}
   },
-  /** Buka pemindai. onCode(text) → return true untuk menutup. */
+  /** Bunyi "bip" kasir: sukses = dua nada naik, gagal = dua nada turun. */
+  tone(ok) {
+    try {
+      this.unlockAudio(); const ac = this.ac; if (!ac) return;
+      const notes = ok ? [[1320, 0, 0.07], [1760, 0.08, 0.11]] : [[330, 0, 0.13], [220, 0.15, 0.2]];
+      notes.forEach((n) => {
+        const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + n[1];
+        o.type = ok ? 'square' : 'sawtooth'; o.frequency.value = n[0];
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(ok ? 0.18 : 0.14, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + n[2]);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + n[2] + 0.02);
+      });
+    } catch (e) {}
+    try { navigator.vibrate && navigator.vibrate(ok ? 70 : [90, 60, 90]); } catch (e) {}
+  },
+  beep() { this.tone(true); },
+  /** Animasi + suara + teks hasil scan. */
+  feedback(root, ok, text, sub, count) {
+    this.tone(ok);
+    const box = root.querySelector('.scanner-view');
+    if (box) { box.classList.remove('hit', 'miss'); void box.offsetWidth; box.classList.add(ok ? 'hit' : 'miss'); const ico = box.querySelector('.hit-ico'); if (ico) ico.innerHTML = icon(ok ? 'check' : 'x'); clearTimeout(box._t); box._t = setTimeout(() => box.classList.remove('hit', 'miss'), 900); }
+    const res = root.querySelector('.scan-result');
+    if (res) {
+      res.className = 'scan-result ' + (ok ? 'ok' : 'bad'); void res.offsetWidth;
+      res.innerHTML = '<span class="ico-box ' + (ok ? 'ok' : 'bad') + '" style="width:36px;height:36px;border-radius:50%">' + icon(ok ? 'check' : 'alert', 'sm') + '</span><div style="min-width:0"><div class="t ellipsis">' + esc(text) + '</div>' + (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</div>' + (count ? '<span class="cnt">' + count + '× scan</span>' : '');
+    }
+  },
+  /** Buka pemindai.
+   *  onCode(text) boleh mengembalikan:
+   *   - undefined / true          → sukses, lalu tutup
+   *   - false                     → sukses, tetap terbuka (scan beruntun)
+   *   - {label, sub, close}       → sukses dengan teks keterangan
+   *   - {error:'pesan'}           → gagal (bunyi & animasi merah), tetap terbuka */
   open(onCode, title) {
     const self = this;
+    this.unlockAudio();
+    let lastCode = '', lastAt = 0, okCount = 0, closing = false;
     const sh = sheet({
       title: title || 'Scan Barcode',
-      body: '<div class="scanner-view" id="scanBox"><video playsinline muted></video><div class="frame"></div><div class="laser"></div></div>' +
-        '<div class="help" style="justify-content:center;margin-top:10px">' + icon('info', 'xs') + 'Arahkan barcode ke dalam kotak. Pastikan cahaya cukup.</div>' +
-        '<div class="row" style="margin-top:14px"><input class="input" id="manualCode" placeholder="Atau ketik kode barcode" inputmode="text" autocomplete="off"><button class="btn outline" id="manualGo" type="button">Cari</button></div>',
+      body: '<div class="scanner-view" id="scanBox"><video playsinline muted></video><div class="frame"></div><div class="laser"></div><div class="hit-ico"></div></div>' +
+        '<div class="scan-result"><span class="ico-box" style="width:36px;height:36px;border-radius:50%">' + icon('scan-barcode', 'sm') + '</span><div><div class="t">Siap memindai…</div><div class="s">Arahkan barcode ke dalam kotak. Akan berbunyi "bip" saat berhasil.</div></div></div>' +
+        '<div class="row" style="margin-top:12px"><input class="input" id="manualCode" placeholder="Atau ketik kode barcode" inputmode="text" autocomplete="off"><button class="btn outline" id="manualGo" type="button">Cari</button></div>',
       onClose() { self.stop(); }
     });
-    const done = (code) => { code = String(code || '').trim(); if (!code) return; self.beep(); if (onCode(code) !== false) sh.close(); };
-    $('#manualGo', sh.el).onclick = () => done($('#manualCode', sh.el).value);
-    $('#manualCode', sh.el).addEventListener('keydown', (e) => { if (e.key === 'Enter') done(e.target.value); });
+    const done = (code, manual) => {
+      code = String(code || '').trim(); if (!code || closing) return;
+      const now = Date.now();
+      if (!manual && code === lastCode && now - lastAt < 1500) return;      // cegah dobel dari satu kali arahkan
+      lastCode = code; lastAt = now;
+      let res;
+      try { res = onCode(code); } catch (e) { res = { error: e.message }; }
+      if (res && res.error) { self.feedback(sh.el, false, res.error, 'Kode: ' + code); return; }
+      okCount++;
+      self.feedback(sh.el, true, (res && res.label) || ('Kode terbaca: ' + code), res && res.sub, res === false || (res && !res.close) ? okCount : 0);
+      const close = res === undefined || res === true || (res && res.close);
+      if (close) { closing = true; setTimeout(() => sh.close(), 550); }
+    };
+    $('#manualGo', sh.el).onclick = () => { done($('#manualCode', sh.el).value, true); $('#manualCode', sh.el).value = ''; };
+    $('#manualCode', sh.el).addEventListener('keydown', (e) => { if (e.key === 'Enter') { done(e.target.value, true); e.target.value = ''; } });
     this.start($('#scanBox', sh.el), done).catch((err) => {
       $('#scanBox', sh.el).outerHTML = '<div class="banner warn">' + icon('alert', 'sm') + '<div>Kamera tidak bisa dibuka (' + esc(err.message || err) + '). Ketik kode barcode secara manual di bawah.</div></div>';
     });
@@ -64,18 +114,18 @@ const Scanner = {
       const video = box.querySelector('video');
       this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false });
       video.srcObject = this.stream; await video.play();
-      let last = '', busyDetect = false;
+      let busyDetect = false;
       this.timer = setInterval(async () => {
         if (busyDetect || video.readyState < 2) return;
         busyDetect = true;
-        try { const r = await det.detect(video); if (r && r[0] && r[0].rawValue && r[0].rawValue !== last) { last = r[0].rawValue; done(last); } } catch (e) {}
+        try { const r = await det.detect(video); if (r && r[0] && r[0].rawValue) done(r[0].rawValue); } catch (e) {}
         busyDetect = false;
       }, 220);
       return;
     }
     // Cadangan untuk browser tanpa BarcodeDetector (mis. iPhone): pustaka html5-qrcode
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js');
-    box.innerHTML = '<div id="h5scan" style="width:100%;height:100%"></div>';
+    box.innerHTML = '<div id="h5scan" style="width:100%;height:100%"></div><div class="frame" style="display:none"></div><div class="hit-ico"></div>';
     this.h5 = new window.Html5Qrcode('h5scan');
     await this.h5.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 260, height: 130 } }, (txt) => done(txt), () => {});
   },

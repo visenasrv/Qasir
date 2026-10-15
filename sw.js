@@ -1,10 +1,10 @@
 /* QASIR — Service Worker: app shell cache-first → aplikasi terbuka instan & tetap jalan offline.
    Naikkan VERSION setiap kali Anda mengubah file frontend agar perangkat mengambil versi baru. */
-const VERSION = 'qasir-v1.0.0';
+const VERSION = 'qasir-v1.1.0';
 const SHELL = [
-  './', 'index.html', 'manifest.webmanifest', 'css/style.css?v=1.0.0',
-  'js/config.js?v=1.0.0', 'js/icons.js?v=1.0.0', 'js/core.js?v=1.0.0', 'js/hpp.js?v=1.0.0', 'js/barcode.js?v=1.0.0',
-  'js/printer.js?v=1.0.0', 'js/p-kasir.js?v=1.0.0', 'js/p-ops.js?v=1.0.0', 'js/p-owner.js?v=1.0.0', 'js/p-promo.js?v=1.0.0', 'js/app.js?v=1.0.0',
+  './', 'index.html', 'manifest.webmanifest', 'css/style.css?v=1.1.0',
+  'js/config.js?v=1.1.0', 'js/icons.js?v=1.1.0', 'js/core.js?v=1.1.0', 'js/export.js?v=1.1.0', 'js/hpp.js?v=1.1.0', 'js/barcode.js?v=1.1.0',
+  'js/printer.js?v=1.1.0', 'js/p-kasir.js?v=1.1.0', 'js/p-ops.js?v=1.1.0', 'js/p-owner.js?v=1.1.0', 'js/p-promo.js?v=1.1.0', 'js/app.js?v=1.1.0',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
 const RUNTIME = VERSION + '-rt';
@@ -31,8 +31,9 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   // Font, library CDN, foto produk → stale-while-revalidate
-  if (/fonts\.(googleapis|gstatic)\.com|cdnjs\.cloudflare\.com|drive\.google\.com|googleusercontent\.com/.test(url.hostname)) {
+  if (/fonts\.(googleapis|gstatic)\.com|cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|drive\.google\.com|googleusercontent\.com/.test(url.hostname)) {
     e.respondWith(caches.open(RUNTIME).then((c) => c.match(req).then((hit) => {
+      if (hit && hit.type === 'opaque' && req.mode === 'cors') hit = null;   // fetch CORS (ekspor gambar) butuh respons non-opaque
       const net = fetch(req).then((res) => { if (res.ok || res.type === 'opaque') c.put(req, res.clone()); return res; }).catch(() => hit);
       return hit || net;
     })));

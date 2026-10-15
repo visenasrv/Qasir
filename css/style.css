@@ -447,3 +447,50 @@ button.pill { cursor: pointer; }
 
 .hide-sm { display: none; }
 @media (min-width: 640px) { .hide-sm { display: inline; } }
+
+/* ---------- v1.1: kamera laptop ---------- */
+.cam-view { position: relative; background: #000; border-radius: 16px; overflow: hidden; aspect-ratio: 16/9; }
+.cam-view video, .cam-view img { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+.cam-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.cam-flash.on { animation: camFlash .35s ease-out; }
+@keyframes camFlash { 0% { opacity: .9; } 100% { opacity: 0; } }
+
+/* ---------- v1.1: umpan balik scan barcode ---------- */
+.scanner-view .hit-ico { position: absolute; left: 50%; top: 48%; width: 84px; height: 84px; margin: -42px 0 0 -42px; border-radius: 50%; display: grid; place-items: center; color: #fff; opacity: 0; transform: scale(.4); pointer-events: none; }
+.scanner-view .hit-ico .ic { width: 44px; height: 44px; stroke-width: 3; }
+.scanner-view.hit .frame { border-color: #22C55E; box-shadow: 0 0 0 999px rgba(22,163,74,.35), 0 0 24px #22C55E inset; }
+.scanner-view.miss .frame { border-color: #EF4444; box-shadow: 0 0 0 999px rgba(220,38,38,.35); }
+.scanner-view.hit .laser, .scanner-view.miss .laser { opacity: 0; }
+.scanner-view.hit .hit-ico { background: #16A34A; animation: popIn .5s cubic-bezier(.2,1.6,.4,1) forwards; }
+.scanner-view.miss .hit-ico { background: #DC2626; animation: popIn .5s cubic-bezier(.2,1.6,.4,1) forwards, shake .35s .1s; }
+@keyframes popIn { 0% { opacity: 0; transform: scale(.4); } 60% { opacity: 1; transform: scale(1.1); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes shake { 0%,100% { margin-left: -42px; } 25% { margin-left: -50px; } 75% { margin-left: -34px; } }
+.scan-result { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--bg); min-height: 58px; }
+.scan-result .t { font-weight: 700; } .scan-result .s { font-size: 12.5px; color: var(--muted); }
+.scan-result.ok { border-color: #86EFAC; background: var(--ok-soft); animation: resIn .3s ease-out; }
+.scan-result.bad { border-color: #FCA5A5; background: var(--bad-soft); animation: resIn .3s ease-out; }
+.scan-result .cnt { margin-left: auto; font-weight: 800; color: var(--ok); white-space: nowrap; }
+@keyframes resIn { from { transform: translateY(6px); opacity: .3; } to { transform: none; opacity: 1; } }
+.bump { animation: bump .45s ease-out; }
+@keyframes bump { 0% { transform: scale(1); } 35% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.pcard.flash { animation: cardFlash .9s ease-out; }
+@keyframes cardFlash { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,.0); } 20% { box-shadow: 0 0 0 4px rgba(22,163,74,.7); } 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); } }
+
+/* ---------- v1.1: ekspor gambar/PDF (salinan rapi tanpa bayangan) ---------- */
+.receipt.is-export { box-shadow: none; border: 0; border-radius: 0; max-width: none; padding: 22px 20px 26px; }
+.receipt.is-export::after { display: none; }
+.menu-paper.is-export { box-shadow: none; border: 0; border-radius: 0; }
+
+/* ---------- v1.1: poster & harga manual ---------- */
+.size-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.img-chip { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.img-chip .thumb { width: 44px; height: 44px; }
+.img-chip .nm { font-weight: 600; font-size: 13.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.img-chip .btn { min-height: 38px; }
+.rec.manual { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 14px; }
+.rec.manual .input { min-height: 44px; font-weight: 800; font-size: 17px; }
+.explain { background: var(--info-soft); border: 1px solid #BFDBFE; border-radius: 14px; padding: 14px 16px; font-size: 14px; line-height: 1.55; }
+.explain b { color: #1E3A8A; }
+.explain ol { margin: 8px 0 0; padding-left: 20px; } .explain li + li { margin-top: 4px; }
+.formula { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; background: #fff; border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 10px; font-weight: 600; }
+.formula .eq { color: var(--muted); } .formula .res { color: var(--p-dark); font-weight: 800; }

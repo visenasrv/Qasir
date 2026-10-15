@@ -79,14 +79,11 @@ const Receipt = {
     });
     return c.toDataURL('image/png');
   },
-  async saveImage(tx) {
-    const url = this.image(tx);
-    const blob = await (await fetch(url)).blob();
-    const file = new File([blob], 'Struk-' + tx.no_nota + '.png', { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Struk ' + tx.no_nota }); return; } catch (e) { if (e.name === 'AbortError') return; } }
-    const a = document.createElement('a'); a.href = url; a.download = file.name; a.click();
-    toast('Gambar struk disimpan', 'ok');
-  },
+  /** Struk persis seperti tampilan di aplikasi → PNG/PDF, langsung tersimpan ke perangkat. */
+  _el(tx) { const d = document.createElement('div'); d.innerHTML = this.html(tx); return d.firstElementChild; },
+  _opt() { const w80 = App.settings.ukuran_kertas === '80'; return { width: w80 ? 460 : 360, pixelRatio: 3, bg: '#ffffff' }; },
+  async saveImage(tx) { await Exporter.png(this._el(tx), 'Struk-' + tx.no_nota + '.png', this._opt()); },
+  async savePdf(tx) { await Exporter.pdf(this._el(tx), 'Struk-' + tx.no_nota + '.pdf', Object.assign(this._opt(), { page: App.settings.ukuran_kertas === '80' ? 80 : 58 })); },
   sendWA(tx, phone) {
     const text = '*' + (App.settings.nama_toko || 'Struk') + '*\n```\n' + this.text(tx) + '\n```';
     const n = waNumber(phone || '');

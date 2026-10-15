@@ -3,21 +3,6 @@
    ========================================================================== */
 'use strict';
 
-/** Unduh file dari data URL / URL (fallback buka tab baru bila lintas-domain). */
-async function downloadUrl(url, name) {
-  try {
-    let href = url;
-    if (!/^data:/.test(url)) { const r = await fetch(url, { mode: 'cors' }); if (!r.ok) throw new Error(); href = URL.createObjectURL(await r.blob()); }
-    const a = document.createElement('a'); a.href = href; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-    if (href !== url) setTimeout(() => URL.revokeObjectURL(href), 4000);
-  } catch (e) { window.open(url, '_blank'); }
-}
-async function shareOrDownloadCanvas(canvas, name, text) {
-  const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
-  const file = new File([blob], name, { type: 'image/png' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], text: text || '' }); return; } catch (e) { if (e.name === 'AbortError') return; } }
-  const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(u), 4000);
-}
 function menuProducts() {
   const cats = (App.boot.categories || []).slice().sort((a, b) => toNum(a.urutan) - toNum(b.urutan));
   const prods = (App.boot.products || []).filter((p) => p.tampil_di_menu !== false && p.status_aktif !== false);
@@ -40,10 +25,10 @@ page('menu', {
   template() {
     return topbar({ back: true, title: 'Daftar Menu', sub: 'Untuk cetak, WhatsApp & media sosial' }) +
       '<div class="wrap" style="padding-top:14px;max-width:1100px"><div class="desk-2" style="grid-template-columns:minmax(0,360px) minmax(0,1fr)"><div class="stack js-opts"></div><div><div class="js-preview"></div><div class="grid-3" style="margin-top:12px"><button class="btn primary" data-act="png" type="button">' + icon('image', 'sm') + 'Gambar</button><button class="btn outline" data-act="pdf" type="button">' + icon('printer', 'sm') + 'PDF</button><button class="btn outline" data-act="wa" type="button" style="color:var(--ok)">' + icon('whatsapp', 'sm') + 'Teks WA</button></div>' +
-      '<div class="help">' + icon('info', 'xs') + 'Hanya produk aktif yang dicentang "Tampilkan di Daftar Menu". Jika foto tidak ikut di gambar, gunakan PDF.</div></div></div></div>';
+      '<div class="help">' + icon('info', 'xs') + 'Gambar & PDF langsung tersimpan ke folder Unduhan, sama persis dengan pratinjau. Hanya produk yang dicentang "Tampilkan di Daftar Menu".</div></div></div></div>';
   },
   init(el) { on('boot', () => { if (App.current === 'menu') this.renderPreview(el); }); },
-  show(el) { this.renderOpts(el); this.renderPreview(el); },
+  show(el) { this.renderOpts(el); this.renderPreview(el); ImgCache.prefetch([App.settings.logo_url].concat((App.boot.products || []).filter((p) => p.tampil_di_menu !== false).map((p) => p.foto_url))); },
   renderOpts(el) {
     const s = this.st;
     $('.js-opts', el).innerHTML = '<div class="card pad"><span class="sec-title"><span class="bullet"></span>Tampilan</span>' +
@@ -58,10 +43,10 @@ page('menu', {
   paperHtml() {
     const s = this.st, st = App.settings, groups = menuProducts();
     if (!groups.length) return emptyState('utensils', 'Menu masih kosong', 'Tambahkan produk & centang "Tampilkan di Daftar Menu".');
-    return '<div class="menu-paper js-paper"><div class="mh">' + (st.logo_url ? '<div class="logo lg" style="margin:0 auto"><img src="' + esc(st.logo_url) + '" alt="" crossorigin="anonymous"></div>' : '') +
+    return '<div class="menu-paper js-paper"><div class="mh">' + (st.logo_url ? '<div class="logo lg" style="margin:0 auto"><img src="' + esc(st.logo_url) + '" alt=""></div>' : '') +
       '<div class="mt">' + esc(s.title || 'MENU') + '</div><div style="font-weight:700;margin-top:2px">' + esc(st.nama_toko || '') + '</div>' + (st.tagline ? '<div class="tg">' + esc(st.tagline) + '</div>' : '') + '</div>' +
       groups.map((g) => '<div class="cat"><b>' + esc(String(g.cat.nama).toUpperCase()) + '</b></div>' +
-        (s.mode === 'img' ? '<div style="display:grid;grid-template-columns:repeat(' + s.cols + ',minmax(0,1fr));gap:10px">' + g.items.map((p) => { const src = p._fotoLocal || p.foto_url; return '<div class="mi"><div class="im">' + (src ? '<img src="' + esc(src) + '" alt="" crossorigin="anonymous">' : '<div class="ph" style="width:100%;height:100%;display:grid;place-items:center;font-weight:800;color:var(--p-dark)">' + esc(initials(p.nama)) + '</div>') + '</div><div class="n">' + esc(p.nama) + '</div><div class="p">' + rp(p.harga_jual) + '</div>' + (s.showVar && varSummary(p.produk_id) ? '<div class="v">' + esc(varSummary(p.produk_id)) + '</div>' : '') + '</div>'; }).join('') + '</div>'
+        (s.mode === 'img' ? '<div style="display:grid;grid-template-columns:repeat(' + s.cols + ',minmax(0,1fr));gap:10px">' + g.items.map((p) => { const src = p._fotoLocal || p.foto_url; return '<div class="mi"><div class="im">' + (src ? '<img src="' + esc(src) + '" alt="">' : '<div class="ph" style="width:100%;height:100%;display:grid;place-items:center;font-weight:800;color:var(--p-dark)">' + esc(initials(p.nama)) + '</div>') + '</div><div class="n">' + esc(p.nama) + '</div><div class="p">' + rp(p.harga_jual) + '</div>' + (s.showVar && varSummary(p.produk_id) ? '<div class="v">' + esc(varSummary(p.produk_id)) + '</div>' : '') + '</div>'; }).join('') + '</div>'
           : g.items.map((p) => '<div class="mi text"><div><div class="n">' + esc(p.nama) + '</div>' + (s.showVar && varSummary(p.produk_id) ? '<div class="v">' + esc(varSummary(p.produk_id)) + '</div>' : '') + '</div><div class="p">' + rp(p.harga_jual) + '</div></div>').join(''))).join('') +
       (s.showFoot && (st.alamat || st.no_wa) ? '<div class="mf">' + (st.alamat ? esc(st.alamat) + '<br>' : '') + (st.no_wa ? 'Pesan via WhatsApp: <b>' + esc(st.no_wa) + '</b>' : '') + '</div>' : '') + '</div>';
   },
@@ -69,22 +54,13 @@ page('menu', {
   actions: {
     mode(a, e, el) { this.st.mode = a.dataset.v; this.renderOpts(el); this.renderPreview(el); },
     cols(a, e, el) { this.st.cols = Number(a.dataset.v); this.renderOpts(el); this.renderPreview(el); },
-    async png(a, e, el) {
+    png(a, e, el) {
       const paper = $('.js-paper', el); if (!paper) return;
-      busy(a, true);
-      try {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-        const c = await window.html2canvas(paper, { scale: 2, useCORS: true, backgroundColor: '#FFF8EE', logging: false });
-        await shareOrDownloadCanvas(c, 'Menu-' + (App.settings.nama_toko || 'Qasir').replace(/\W+/g, '-') + '.png', 'Menu ' + (App.settings.nama_toko || ''));
-      } catch (err) { toast('Gagal membuat gambar: ' + err.message + '. Coba tombol PDF.', 'bad', 5000); }
-      busy(a, false);
+      runExport(a, () => Exporter.png(paper, 'Menu-' + (App.settings.nama_toko || 'Qasir').replace(/\W+/g, '-') + '.png', { width: 760, pixelRatio: 2, bg: '#FFF8EE' }));
     },
     pdf(a, e, el) {
       const paper = $('.js-paper', el); if (!paper) return;
-      const w = window.open('', '_blank'); if (!w) { toast('Izinkan pop-up untuk mencetak', 'warn'); return; }
-      const css = Array.from(document.styleSheets).map((s) => { try { return Array.from(s.cssRules).map((r) => r.cssText).join('\n'); } catch (x) { return ''; } }).join('\n');
-      w.document.write('<html><head><title>Menu ' + esc(App.settings.nama_toko) + '</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Playfair+Display:ital,wght@0,800;1,400&display=swap"><style>' + css + ':root{' + document.documentElement.style.cssText + '}body{background:#fff;padding:0;margin:0}.menu-paper{box-shadow:none;border:0;border-radius:0;max-width:760px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}.mi{break-inside:avoid}@page{margin:10mm}</style></head><body>' + paper.outerHTML + '<script>window.onload=function(){setTimeout(function(){print()},500)}<\/script></body></html>');
-      w.document.close();
+      runExport(a, () => Exporter.pdf(paper, 'Menu-' + (App.settings.nama_toko || 'Qasir').replace(/\W+/g, '-') + '.pdf', { width: 760, pixelRatio: 2, bg: '#FFF8EE', page: 'a4', breakSel: '.cat, .mi, .mf', keepSel: '.cat' }));
     },
     wa() {
       const st = App.settings, groups = menuProducts();
@@ -96,6 +72,11 @@ page('menu', {
     }
   }
 });
+function imgChip(url, name, file, isLogo) {
+  return '<div class="img-chip"><div class="thumb"><img src="' + esc(url) + '" data-src="' + esc(url) + '" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.visibility=\'hidden\'"></div><div class="nm grow">' + esc(name) + '</div>' +
+    '<button class="btn sm primary" data-act="cpimg" data-u="' + esc(url) + '" type="button">' + icon('copy', 'sm') + 'Salin</button>' +
+    '<button class="icon-btn ghost-border" data-act="dl" data-u="' + esc(url) + '" data-n="' + esc(file) + '" type="button" aria-label="Unduh">' + icon('download', 'sm') + '</button></div>';
+}
 async function copyText(t) {
   try { await navigator.clipboard.writeText(t); toast('Disalin ke clipboard', 'ok', 1500); }
   catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('Disalin', 'ok', 1500); } catch (x) { toast('Gagal menyalin', 'bad'); } ta.remove(); }
@@ -108,7 +89,10 @@ const POSTER_STYLES = {
   ceria: { nama: 'Ceria & colorful', id: 'gaya ceria dan penuh warna, elemen grafis playful, confetti, warna cerah kontras, energik', en: 'cheerful and colorful style, playful graphic elements, confetti, bright contrasting colors, energetic' },
   premium: { nama: 'Premium elegan', id: 'gaya premium dan elegan, latar gelap dramatis, pencahayaan studio low-key, aksen emas, tekstur marmer', en: 'premium elegant style, dramatic dark background, low-key studio lighting, gold accents, marble texture' }
 };
-const POSTER_SIZES = { '1:1': ['Feed IG', '1:1', 'square 1:1 (1080×1080 px)', 'persegi 1:1 (1080×1080 px)', [22, 22]], '4:5': ['Feed 4:5', '4:5', 'portrait 4:5 (1080×1350 px)', 'potret 4:5 (1080×1350 px)', [20, 25]], '9:16': ['Story', '9:16', 'vertical 9:16 (1080×1920 px) for Instagram/WhatsApp story', 'vertikal 9:16 (1080×1920 px) untuk story IG/WhatsApp', [16, 28]], A4: ['Cetak A4', 'A4', 'A4 portrait print poster (2480×3508 px, 300 dpi)', 'poster cetak A4 potret (2480×3508 px, 300 dpi)', [20, 28]] };
+const POSTER_SIZES = { '1:1': ['Feed IG', '1:1', 'square 1:1 (1080×1080 px)', 'persegi 1:1 (1080×1080 px)', [22, 22]], '4:5': ['Feed 4:5', '4:5', 'portrait 4:5 (1080×1350 px)', 'potret 4:5 (1080×1350 px)', [20, 25]], '9:16': ['Story', '9:16', 'vertical 9:16 (1080×1920 px) for Instagram/WhatsApp story', 'vertikal 9:16 (1080×1920 px) untuk story IG/WhatsApp', [16, 28]], A4: ['Cetak A4', 'A4', 'A4 portrait print poster (2480×3508 px, 300 dpi)', 'poster cetak A4 potret (2480×3508 px, 300 dpi)', [20, 28]],
+  '16:9': ['Landscape', '16:9', 'landscape 16:9 (1920×1080 px) for banner, YouTube thumbnail, website or TV menu display', 'landscape 16:9 (1920×1080 px) untuk banner, thumbnail YouTube, website, atau layar TV menu', [30, 17]],
+  A4L: ['A4 Landscape', 'A4 ↔', 'A4 landscape print poster (3508×2480 px, 300 dpi)', 'poster cetak A4 landscape (3508×2480 px, 300 dpi)', [28, 20]] };
+const POSTER_LANDSCAPE = { '16:9': 1, A4L: 1 };
 page('poster', {
   role: 'OWNER', backTo: 'lainnya',
   st: { picks: [], style: 'hangat', size: '4:5', headline: '', promo: '', cta: 'Pesan sekarang!', lang: 'id', out: null },
@@ -137,12 +121,15 @@ page('poster', {
       '<label class="field"><span class="lbl">Judul besar</span><input class="input" data-pk="headline" value="' + esc(s.headline) + '"></label>' +
       '<label class="field"><span class="lbl">Teks promo (opsional)</span><input class="input" data-pk="promo" value="' + esc(s.promo) + '" placeholder="contoh: Diskon 10% setiap Jumat"></label>' +
       '<label class="field"><span class="lbl">Ajakan (CTA)</span><input class="input" data-pk="cta" value="' + esc(s.cta) + '"></label></div>' +
-      '<div class="card pad"><div class="step-h"><span class="n">3</span><span class="t">Ukuran</span></div><div class="row" style="gap:8px">' + Object.keys(POSTER_SIZES).map((k) => { const z = POSTER_SIZES[k]; return '<button class="size-tile' + (s.size === k ? ' is-on' : '') + '" data-act="size" data-k="' + k + '" type="button"><span class="ar" style="width:' + z[4][0] + 'px;height:' + z[4][1] + 'px"></span>' + z[0] + '<span class="muted" style="font-size:11px">' + z[1] + '</span></button>'; }).join('') + '</div></div>' +
+      '<div class="card pad"><div class="step-h"><span class="n">3</span><span class="t">Ukuran</span></div><div class="size-grid">' + Object.keys(POSTER_SIZES).map((k) => { const z = POSTER_SIZES[k]; return '<button class="size-tile' + (s.size === k ? ' is-on' : '') + '" data-act="size" data-k="' + k + '" type="button"><span class="ar" style="width:' + z[4][0] + 'px;height:' + z[4][1] + 'px"></span>' + z[0] + '<span class="muted" style="font-size:11px">' + z[1] + '</span></button>'; }).join('') + '</div></div>' +
       '</div><div class="stack"><div class="card pad"><div class="step-h"><span class="n">4</span><span class="t">Prompt siap pakai</span><span class="grow"></span><div class="seg light" style="width:auto"><button data-act="lang" data-v="id" type="button" class="' + (s.lang === 'id' ? 'on' : '') + '">ID</button><button data-act="lang" data-v="en" type="button" class="' + (s.lang === 'en' ? 'on' : '') + '">EN</button></div></div><div class="js-out"></div></div>' +
-      '<div class="card pad"><span class="sec-title"><span class="bullet"></span>Lampirkan gambar ini ke AI</span><div class="row wrapx" style="gap:8px;margin-top:10px">' +
-      (App.settings.logo_url ? '<button class="btn sm outline" data-act="dl" data-u="' + esc(App.settings.logo_url) + '" data-n="logo.png" type="button">' + icon('download', 'xs') + 'Logo</button>' : '<a class="btn sm outline" href="#/pengaturan">' + icon('upload', 'xs') + 'Unggah logo dulu</a>') +
-      s.picks.map((id) => { const p = Local.product(id); const u = p && (p._fotoLocal || p.foto_url); return u ? '<button class="btn sm outline" data-act="dl" data-u="' + esc(u) + '" data-n="' + esc(p.nama.replace(/\W+/g, '-')) + '.jpg" type="button">' + icon('download', 'xs') + esc(p.nama) + '</button>' : ''; }).join('') +
-      '</div><div class="help">' + icon('info', 'xs') + 'Unggah foto produk & logo bersama prompt agar AI memakai produk asli Anda.</div></div></div></div>';
+      '<div class="card pad"><div class="card-h"><span class="sec-title"><span class="bullet"></span>Gambar untuk dilampirkan ke AI</span></div><div class="stack" style="gap:8px">' +
+      (App.settings.logo_url ? imgChip(App.settings.logo_url, 'Logo ' + (App.settings.nama_toko || ''), 'logo.png', true) : '<a class="btn sm outline" href="#/pengaturan">' + icon('upload', 'xs') + 'Unggah logo dulu di Pengaturan</a>') +
+      s.picks.map((id) => { const p = Local.product(id); const u = p && (p._fotoLocal || p.foto_url); return u ? imgChip(u, p.nama, p.nama.replace(/\W+/g, '-') + '.jpg') : (p ? '<div class="img-chip"><div class="thumb">' + productImg(p) + '</div><div class="nm grow">' + esc(p.nama) + '</div><span class="muted" style="font-size:12px">belum ada foto</span></div>' : ''); }).join('') +
+      '</div><div class="help">' + icon('info', 'xs') + '<span><b>Salin</b> → buka Gemini/ChatGPT → <b>tempel</b> (Ctrl+V, atau tekan lama → Tempel di HP). Salin satu per satu: prompt, logo, lalu foto produk.</span></div></div></div></div>';
+    // pakai salinan gambar di perangkat (lebih cepat & tetap tampil saat offline)
+    const chips = $$('.img-chip img[data-src]', el);
+    ImgCache.get(chips.map((i) => i.dataset.src)).then((m) => chips.forEach((i) => { if (m[i.dataset.src]) { i.style.visibility = ''; i.src = m[i.dataset.src]; } })).catch(() => {});
     this.paintOut(el);
   },
   build() {
@@ -152,11 +139,13 @@ page('poster', {
     const color = st.warna_primer || '#F26B1D';
     const id = 'Buatkan poster promosi ' + z[3] + ' untuk usaha kuliner "' + (st.nama_toko || '') + '".\n\n' +
       'PRODUK UTAMA: ' + list('id') + '. Gunakan foto produk yang saya lampirkan sebagai acuan utama — pertahankan bentuk, warna, dan tampilan asli produk, tampilkan menggugah selera dan menjadi fokus utama poster.\n\n' +
+      (POSTER_LANDSCAPE[s.size] ? 'KOMPOSISI: format melebar — produk berjajar di satu sisi (kanan), blok teks judul/promo/harga di sisi lain (kiri), banyak ruang lega, tetap seimbang.\n\n' : '') +
       'GAYA VISUAL: ' + sty.id + '. Warna utama brand ' + color + ' dipadukan warna netral yang serasi. Fotografi makanan profesional, tajam, detail tekstur jelas.\n\n' +
       'TEKS DI POSTER (bahasa Indonesia, ejaan persis):\n- Judul besar: "' + s.headline + '"\n' + (s.promo ? '- Label promo mencolok: "' + s.promo + '"\n' : '') + items.map((p) => '- "' + p.nama + ' ' + rp(p.harga_jual) + '"\n').join('') + '- Ajakan: "' + s.cta + '"\n' + (st.no_wa ? '- Kontak: "WA ' + st.no_wa + '"\n' : '') + (st.alamat ? '- Alamat kecil: "' + st.alamat + '"\n' : '') +
       '\nLOGO: letakkan logo yang saya lampirkan di bagian atas/pojok, ukuran proporsional, jangan diubah.\n\nTIPOGRAFI: judul tebal dan mudah dibaca dari jauh, hierarki jelas, harga menonjol. Hindari teks tambahan selain yang disebutkan, tanpa watermark.';
     const en = 'Create a ' + z[2] + ' promotional poster for the food business "' + (st.nama_toko || '') + '".\n\n' +
       'HERO PRODUCTS: ' + list('en') + '. Use the attached product photos as the main reference — keep the real shape, color and look of each product, make them appetizing and the focal point.\n\n' +
+      (POSTER_LANDSCAPE[s.size] ? 'COMPOSITION: wide layout — products lined up on one side (right), headline/promo/price text block on the other side (left), generous breathing room, well balanced.\n\n' : '') +
       'VISUAL STYLE: ' + sty.en + '. Brand primary color ' + color + ' combined with harmonious neutrals. Professional food photography, sharp focus, rich texture detail.\n\n' +
       'TEXT ON POSTER (keep exactly as written, in Indonesian):\n- Headline: "' + s.headline + '"\n' + (s.promo ? '- Eye-catching promo badge: "' + s.promo + '"\n' : '') + items.map((p) => '- "' + p.nama + ' ' + rp(p.harga_jual) + '"\n').join('') + '- Call to action: "' + s.cta + '"\n' + (st.no_wa ? '- Contact: "WA ' + st.no_wa + '"\n' : '') + (st.alamat ? '- Small address line: "' + st.alamat + '"\n' : '') +
       '\nLOGO: place the attached logo at the top/corner, proportional size, do not alter it.\n\nTYPOGRAPHY: bold, highly legible headline, clear hierarchy, prominent prices. No extra text beyond the above, no watermark.';
@@ -178,7 +167,13 @@ page('poster', {
     size(a, e, el) { this.st.size = a.dataset.k; this.render(el); },
     lang(a, e, el) { this.st.lang = a.dataset.v; this.render(el); },
     copy() { const o = this.st.out; if (o) copyText(this.st.lang === 'id' ? o.id : o.en); },
-    dl(a) { downloadUrl(a.dataset.u, a.dataset.n); },
+    async dl(a) { busy(a, true); try { const d = await ImgCache.one(a.dataset.u); if (!d) throw new Error('Gambar belum bisa dimuat'); await Exporter.saveBlob(await (await fetch(d)).blob(), a.dataset.n); } catch (e) { toast(e.message, 'bad'); } busy(a, false); },
+    async cpimg(a) {
+      busy(a, true);
+      try { await copyImage(a.dataset.u); toast('Gambar disalin — tinggal tempel (Ctrl+V) di Gemini/ChatGPT', 'ok', 3000); a.innerHTML = icon('check', 'sm') + 'Tersalin'; setTimeout(() => { a.innerHTML = icon('copy', 'sm') + 'Salin'; }, 2500); }
+      catch (e) { toast(e.message || 'Gagal menyalin gambar', 'bad', 4500); }
+      busy(a, false);
+    },
     async save(a) {
       const o = this.st.out; if (!o) return;
       if (!navigator.onLine) { toast('Menyimpan riwayat butuh internet', 'warn'); return; }

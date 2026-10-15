@@ -132,7 +132,7 @@ const emit = (name, detail) => Bus.dispatchEvent(new CustomEvent(name, { detail 
 const on = (name, fn) => Bus.addEventListener(name, (e) => fn(e.detail));
 
 /* ------------------------------------------------------------- API PRO */
-const READ_ACTIONS = /^(ping|bootstrap|heartbeat|getTransactions|getProof|getDebts|getDashboard|getReport|getMutations|getSyncStatus|getActivityLog|getReview|getCloseSummary|getPromptHistory)$/;
+const READ_ACTIONS = /^(ping|bootstrap|heartbeat|getTransactions|getProof|getDebts|getDashboard|getReport|getMutations|getSyncStatus|getActivityLog|getReview|getCloseSummary|getPromptHistory|getImages)$/;
 async function apiOnce(action, data, timeout, reqId) {
   const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), timeout), t0 = performance.now();
   try {
@@ -567,14 +567,18 @@ async function compressImage(file, o) {
     const img = await loadImage(url);
     let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
     if (o.square) { const m = Math.min(sw, sh); sx = (sw - m) / 2; sy = (sh - m) / 2; sw = sh = m; }
-    let scale = Math.min(1, o.maxDim / Math.max(sw, sh)), q = 0.85, out = '';
+    // fit: jadikan persegi 1:1 tanpa memotong (sisi pendek diberi latar)
+    const side = Math.max(sw, sh);
+    let scale = Math.min(1, o.maxDim / (o.fit ? side : Math.max(sw, sh))), q = 0.85, out = '';
     for (let i = 0; i < 10; i++) {
       const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(sw * scale)); c.height = Math.max(1, Math.round(sh * scale));
+      if (o.fit) { c.width = c.height = Math.max(1, Math.round(side * scale)); }
+      else { c.width = Math.max(1, Math.round(sw * scale)); c.height = Math.max(1, Math.round(sh * scale)); }
       const ctx = c.getContext('2d');
-      if (o.type === 'image/jpeg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); }
+      if (o.type === 'image/jpeg' || o.bg) { ctx.fillStyle = o.bg || '#fff'; ctx.fillRect(0, 0, c.width, c.height); }
       ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+      if (o.fit) { const dw = sw * scale, dh = sh * scale; ctx.drawImage(img, sx, sy, sw, sh, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh); }
+      else ctx.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
       out = c.toDataURL(o.type, q);
       const bytes = Math.ceil((out.length - out.indexOf(',') - 1) * 3 / 4);
       if (bytes <= o.maxBytes) return out;
@@ -585,14 +589,20 @@ async function compressImage(file, o) {
   } finally { URL.revokeObjectURL(url); }
 }
 const dataUrlKB = (u) => Math.round(Math.ceil((u.length - u.indexOf(',') - 1) * 3 / 4) / 1024);
-function pickImage(capture) {
+function pickFile(capture) {
   return new Promise((res) => {
     const inp = document.createElement('input');
     inp.type = 'file'; inp.accept = 'image/*';
     if (capture) inp.setAttribute('capture', 'environment');
     inp.onchange = () => res(inp.files && inp.files[0] ? inp.files[0] : null);
+    inp.addEventListener('cancel', () => res(null));
     inp.click();
   });
+}
+/** Kamera: di HP → kamera bawaan HP; di laptop/PC → webcam (bukan file manager). Galeri → pemilih file. */
+function pickImage(capture) {
+  if (capture && typeof Camera !== 'undefined' && !Camera.isTouch() && Camera.usable()) return Camera.open();
+  return pickFile(capture);
 }
 
 /* ----------------------------------------------------------- Router SPA */

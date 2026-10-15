@@ -1,13 +1,13 @@
-# Qasir — Aplikasi Kasir UMKM
+# Qasir v1.1 — Aplikasi Kasir UMKM
 
 Aplikasi kasir (POS) untuk usaha jajanan, roti, donat & kopi. Frontend statis (GitHub Pages) + backend Google Apps Script sebagai REST API, data di Google Sheets & Google Drive.
 
 **Panduan pemasangan lengkap:** lihat [`PANDUAN-INSTALASI.md`](PANDUAN-INSTALASI.md).
 
 ## Fitur
-- **Kasir** cepat: grid produk + kategori, cari, scan barcode, varian & topping, catatan item, diskon/promo otomatis, keranjang tersimpan.
+- **Kasir** cepat: grid produk + kategori, cari, scan barcode (bunyi bip + animasi; alat scan USB/Bluetooth), varian & topping, catatan item, diskon/promo otomatis, keranjang tersimpan.
 - **Pembayaran** Tunai (kembalian otomatis), QRIS & Transfer (foto bukti dikompres ≤250 KB), Utang (pelanggan + daftar utang + pelunasan & tagih WA).
-- **Struk** printer thermal Bluetooth 58/80 mm, simpan gambar, kirim WhatsApp.
+- **Struk** printer thermal Bluetooth 58/80 mm, simpan Gambar/PDF langsung ke perangkat, kirim WhatsApp.
 - **Offline 1–8 jam**: transaksi, stok masuk, pembatalan & pelunasan tersimpan di perangkat lalu tersinkron otomatis; nomor nota unik per perangkat.
 - **Dashboard** omzet, laba, terlaris, grafik penjualan, metode bayar, status perangkat, stok menipis, utang jatuh tempo, audit pembatalan.
 - **Laporan** laba rugi, per produk/kategori/kasir/metode/hari, ekspor Excel & PDF.
@@ -24,6 +24,7 @@ manifest.webmanifest  Pasang sebagai aplikasi di HP
 css/style.css         Desain "Warm Artisanal POS"
 js/config.js          ← ISI GAS_URL DI SINI
 js/core.js            API, sesi, IndexedDB, antrean sinkron, router, komponen UI
+js/export.js          Simpan gambar/PDF, cache gambar, salin gambar, kamera webcam
 js/app.js             Shell, navigasi, start-up
 js/p-kasir.js         Login, kasir, varian, pembayaran, sukses
 js/p-ops.js           Riwayat, stok, utang, akun, menu lainnya
