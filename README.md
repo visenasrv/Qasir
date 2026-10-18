@@ -1,11 +1,11 @@
-# Qasir v1.3.3
+# Qasir v1.3.4
 
 Aplikasi kasir (POS) untuk UMKM makanan & minuman — warung makan, kedai kopi & minuman, toko kue, jajanan & snack, katering. Frontend statis (GitHub Pages) + backend Google Apps Script sebagai REST API, data di Google Sheets & Google Drive.
 
 **Panduan pemasangan lengkap:** lihat [`PANDUAN-INSTALASI.md`](PANDUAN-INSTALASI.md).
 
 ## Fitur
-- **Kasir** cepat: grid produk + kategori, cari, scan barcode (bunyi bip + animasi; alat scan USB/Bluetooth), varian & topping, catatan item, diskon/promo otomatis, keranjang tersimpan.
+- **Kasir** cepat: grid produk + kategori, cari, scan barcode (bunyi bip + animasi, jumlah per scan; alat scan USB/Bluetooth, pengali `3*`), varian & topping, catatan item, diskon/promo otomatis, keranjang tersimpan.
 - **Pembayaran** Tunai (kembalian otomatis), QRIS & Transfer (foto bukti dikompres ≤250 KB), Utang (pelanggan + daftar utang + pelunasan & tagih WA).
 - **Struk** printer thermal Bluetooth 58/80 mm, simpan Gambar/PDF langsung ke perangkat, kirim WhatsApp.
 - **Offline 1–8 jam**: transaksi, stok masuk, pembatalan & pelunasan tersimpan di perangkat lalu tersinkron otomatis; nomor nota unik per perangkat.

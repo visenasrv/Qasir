@@ -153,10 +153,12 @@ page('kasir', {
     // Alat scan barcode USB/Bluetooth (mengetik kode + Enter) → langsung masuk keranjang dengan bunyi bip
     q.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
-      const p = findByBarcode(q.value); if (!p) return;
+      // Ketik "3*" (atau "3x") lalu scan dengan alat → masuk 3 sekaligus
+      const m = q.value.trim().match(/^(\d{1,3})\s*[*xX×]\s*(\S+)$/), mult = m ? Number(m[1]) : 1;
+      const p = findByBarcode(m ? m[2] : q.value); if (!p) return;
       e.preventDefault();
-      const r = addProductFlow(p, true);
-      if (r === 'added') { Scanner.tone(true); flashCard(el, p.produk_id); toast(p.nama + ' ditambahkan', 'ok', 1100); }
+      const r = addProductFlow(p, true, mult);
+      if (r === 'added') { Scanner.tone(true); flashCard(el, p.produk_id); toast(p.nama + (mult > 1 ? ' ×' + mult : '') + ' ditambahkan', 'ok', 1100); }
       else if (r !== 'variant') { Scanner.tone(false); toast(p.nama + (r === 'habis' ? ' habis' : ' — stok tidak cukup'), 'warn'); }
       q.value = ''; this.state.q = ''; this.renderGrid(el);
     });
@@ -248,15 +250,27 @@ page('kasir', {
     tap(a) { const p = Local.product(a.dataset.pid); if (!p) return; addProductFlow(p); },
     dec(a) { const l = Cart.lines.find((x) => x.produk_id === a.dataset.pid && !x.varian.length && !x.catatan) || Cart.lines.filter((x) => x.produk_id === a.dataset.pid).pop(); if (l) Cart.setQty(l.key, l.qty - 1); },
     scan(a, e, el) {
-      Scanner.open((code) => {
+      const sub = (pid) => 'Di keranjang: ' + Cart.qtyOf(pid) + ' · Total ' + rp(Cart.totals().total);
+      Scanner.open((code, qty) => {
         const p = findByBarcode(code);
         if (!p) return { error: 'Barcode tidak terdaftar' };
-        const r = addProductFlow(p, true);
+        qty = Math.max(1, qty || 1);
+        const before = Cart.qtyOf(p.produk_id);
+        const r = addProductFlow(p, true, qty);
         if (r === 'habis') return { error: p.nama + ' — stok habis' };
         if (r === 'fail') return { error: p.nama + ' — stok tidak cukup' };
         if (r === 'variant') return { label: p.nama, sub: 'Pilih varian…', close: true };
         flashCard(el, p.produk_id);
-        return { label: p.nama + ' ditambahkan', sub: 'Di keranjang: ' + Cart.qtyOf(p.produk_id) + ' · Total ' + rp(Cart.totals().total) };
+        const added = Cart.qtyOf(p.produk_id) - before;
+        return { label: p.nama + (added > 1 ? ' ×' + added : '') + ' ditambahkan', sub: sub(p.produk_id), line: Cart.key(p.produk_id, [], '') };
+      }, 'Scan Barcode', {
+        qty: true,
+        onLineQty(key, q) {
+          const l = Cart.lines.find((x) => x.key === key); if (!l) return null;
+          if (q !== null && q !== l.qty) { Cart.setQty(key, Math.max(0, q)); flashCard(el, l.produk_id); }
+          const now = Cart.lines.find((x) => x.key === key);
+          return { qty: now ? now.qty : 0, sub: sub(l.produk_id) };
+        }
       });
     },
     'cart-open'() { if (window.matchMedia('(min-width:1024px)').matches) go('bayar'); else openCartSheet(); },
@@ -270,10 +284,10 @@ page('kasir', {
   }
 });
 
-function addProductFlow(p, fromScan) {
+function addProductFlow(p, fromScan, qty) {
   if (isHabis(p)) { if (!fromScan) toast(p.nama + ' habis', 'warn'); return 'habis'; }
-  if (productHasOptions(p.produk_id)) { openVariantSheet(p); return 'variant'; }
-  return Cart.add(p, [], 1, '') ? 'added' : 'fail';
+  if (productHasOptions(p.produk_id)) { openVariantSheet(p, qty); return 'variant'; }
+  return Cart.add(p, [], qty || 1, '') ? 'added' : 'fail';
 }
 function findByBarcode(code) { code = String(code || '').trim().toLowerCase(); return code ? (App.boot.products || []).find((x) => String(x.kode_barcode).toLowerCase() === code) : null; }
 /** Sorot kartu produk & keranjang setelah scan — kasir langsung tahu barang masuk. */
@@ -365,12 +379,12 @@ function openDiscountSheet() {
 }
 
 /* ============================================================ SHEET VARIAN */
-function openVariantSheet(p) {
+function openVariantSheet(p, q0) {
   const vars = (App.boot.variants || []).filter((v) => v.produk_id === p.produk_id);
   const groups = [];
   vars.forEach((v) => { let g = groups.find((x) => x.nama === v.grup); if (!g) { g = { nama: v.grup, wajib: false, items: [] }; groups.push(g); } g.items.push(v); if (v.wajib_pilih) g.wajib = true; });
   const sel = {}; groups.forEach((g) => { sel[g.nama] = g.wajib ? [g.items[0].varian_id] : []; });
-  let qty = 1, note = '';
+  let qty = Math.max(1, q0 || 1), note = '';
   const grpIcon = (g, v) => g.nama.toLowerCase() === 'suhu' ? (/hot|panas/i.test(v.nama) ? icon('flame', 'sm') : /ice|dingin|es/i.test(v.nama) ? icon('snowflake', 'sm') : '') : '';
   const body = groups.map((g) => '<div class="label-row" style="margin-top:' + (g === groups[0] ? '0' : '20px') + '"><span class="sec-title">' + esc(g.nama) + '</span><span class="pill neutral sm">' + (g.wajib ? 'Wajib pilih 1' : 'Opsional, boleh lebih dari 1') + '</span></div>' +
     '<div class="' + (g.wajib && g.items.length <= 3 ? 'grid-' + Math.max(2, g.items.length) : 'stack') + '" style="' + (g.wajib && g.items.length <= 3 ? '' : 'display:grid;gap:10px') + '">' +

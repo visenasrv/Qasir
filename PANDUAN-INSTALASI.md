@@ -1,4 +1,4 @@
-# 📋 Panduan Instalasi — Qasir v1.3.3
+# 📋 Panduan Instalasi — Qasir v1.3.4
 
 Qasir terdiri dari dua bagian:
 
@@ -257,14 +257,21 @@ Data Anda (produk, transaksi, pengaturan) **tidak berubah** — cukup ganti kode
 4. Dari folder `qasir`:
    ```bash
    git add .
-   git commit -m "Update Qasir v1.3.3"
+   git commit -m "Update Qasir v1.3.4"
    git push
    ```
-5. Tunggu 1–2 menit. Di HP/laptop kasir, tutup aplikasi lalu buka lagi — versi baru otomatis terpasang (versi sudah dinaikkan ke `qasir-v1.3.3` di `sw.js`).
+5. Tunggu 1–2 menit. Di HP/laptop kasir, tutup aplikasi lalu buka lagi — versi baru otomatis terpasang (versi sudah dinaikkan ke `qasir-v1.3.4` di `sw.js`).
 
 > ⚠️ **Update ke v1.3 wajib mengganti `Kode.gs` juga** (ada fitur server baru untuk Jual Online). Setelah *New version* di-deploy, permintaan pertama otomatis menambah sheet **PesananOnline**, kolom **kanal** di sheet Promo, dan folder Drive **Toko Online** — data lama tidak berubah. Jangan jalankan `setupAppEnvironment` lagi.
 
-> 🔁 **Sudah memasang v1.3? Update ke v1.3.1:** ganti isi folder repo dengan isi ZIP baru (tetap pakai `js/config.js` lama), lalu `git add . && git commit -m "Update Qasir v1.3.3" && git push`. Ganti juga `Kode.gs` → *Deploy → Manage deployments → ✏️ → Version: New version → Deploy* agar pengecekan status toko lebih hemat kuota (tanpa ini pun tetap berjalan, hanya lebih boros).
+> 🔁 **Sudah memasang v1.3? Update ke v1.3.1:** ganti isi folder repo dengan isi ZIP baru (tetap pakai `js/config.js` lama), lalu `git add . && git commit -m "Update Qasir v1.3.4" && git push`. Ganti juga `Kode.gs` → *Deploy → Manage deployments → ✏️ → Version: New version → Deploy* agar pengecekan status toko lebih hemat kuota (tanpa ini pun tetap berjalan, hanya lebih boros).
+
+**Yang baru di v1.3.4 — Jumlah per scan:**
+- Saat kamera scan terbuka ada isian **Jumlah per scan** (tombol − / +, ketik angka, atau pilih cepat 2× 3× 5× 10×). Pilih 3 lalu scan sekali → barang masuk **3 sekaligus**. Setelah scan, jumlah kembali ke 1.
+- Di kotak hasil scan ada pengatur **Jumlah di keranjang** (− / +) untuk mengoreksi jumlah barang yang barusan discan tanpa menutup kamera.
+- Produk bervarian (mis. minuman): jumlah yang dipilih ikut terbawa ke layar pilih varian.
+- **Alat barcode scanner (USB/Bluetooth):** ketik `3*` di kolom *Cari produk* lalu tembak barcode → masuk 3 sekaligus. Tanpa `3*` tetap masuk 1.
+- Jumlah otomatis dibatasi sesuai stok yang tersedia.
 
 **Yang baru di v1.3.3:**
 - Perbaikan scan barcode kamera: di perangkat yang pemindai bawaannya tidak mendukung barcode toko, Qasir otomatis memakai pemindai cadangan sehingga barcode tetap bisa dibaca.

@@ -112,28 +112,64 @@ const Scanner = {
    *   - undefined / true          → sukses, lalu tutup
    *   - false                     → sukses, tetap terbuka (scan beruntun)
    *   - {label, sub, close}       → sukses dengan teks keterangan
-   *   - {error:'pesan'}           → gagal (bunyi & animasi merah), tetap terbuka */
-  open(onCode, title) {
-    const self = this;
+   *   - {error:'pesan'}           → gagal (bunyi & animasi merah), tetap terbuka
+   *  opts.qty = true → tampil isian "Jumlah per scan" (onCode menerima jumlah sebagai argumen kedua);
+   *  hasil {line} + opts.onLineQty(line, qty) → jumlah barang yang barusan discan bisa diubah langsung. */
+  open(onCode, title, opts) {
+    const self = this; opts = opts || {};
     this.unlockAudio();
-    let lastCode = '', lastAt = 0, okCount = 0, closing = false;
+    let lastCode = '', lastAt = 0, okCount = 0, closing = false, qty = 1;
+    const qtyBar = opts.qty ? '<div class="scan-qty"><span class="lbl">Jumlah per scan</span><div class="stepper"><button type="button" data-q="-1" aria-label="Kurangi">' + icon('minus', 'sm') + '</button><input class="v" id="scanQty" type="number" inputmode="numeric" min="1" max="999" value="1" aria-label="Jumlah per scan"><button class="plus" type="button" data-q="1" aria-label="Tambah">' + icon('plus', 'sm') + '</button></div>' +
+      '<div class="chips">' + [2, 3, 5, 10].map((n) => '<button class="chip" type="button" data-qn="' + n + '">' + n + '×</button>').join('') + '</div></div>' : '';
     const sh = sheet({
       title: title || 'Scan Barcode',
-      body: '<div class="scanner-view" id="scanBox"><video playsinline muted></video><div class="frame"></div><div class="laser"></div><div class="hit-ico"></div></div>' +
+      body: '<div class="scan-wrap"><div class="scanner-view' + (opts.qty ? ' compact' : '') + '" id="scanBox"><video playsinline muted></video><div class="frame"></div><div class="laser"></div><div class="hit-ico"></div></div>' + (opts.qty ? '<div class="qty-badge" hidden></div>' : '') + '</div>' + qtyBar +
         '<div class="scan-result"><span class="ico-box" style="width:36px;height:36px;border-radius:50%">' + icon('scan-barcode', 'sm') + '</span><div><div class="t">Siap memindai…</div><div class="s">Arahkan barcode ke dalam kotak. Akan berbunyi "bip" saat berhasil.</div></div></div>' +
         '<div class="row" style="margin-top:12px"><input class="input" id="manualCode" placeholder="Atau ketik kode barcode" inputmode="text" autocomplete="off"><button class="btn outline" id="manualGo" type="button">Cari</button></div>',
       onClose() { self.stop(); }
     });
+    const qIn = $('#scanQty', sh.el), badge = $('.qty-badge', sh.el);
+    const setQty = (n) => {
+      qty = Math.max(1, Math.min(999, Math.floor(Number(n)) || 1));
+      if (qIn && Number(qIn.value) !== qty) qIn.value = qty;
+      if (badge) { badge.hidden = qty <= 1; badge.textContent = '×' + qty; }
+      $$('[data-qn]', sh.el).forEach((b) => b.classList.toggle('on', Number(b.dataset.qn) === qty));
+    };
+    if (opts.qty) {
+      sh.el.addEventListener('click', (e) => {
+        const q = e.target.closest('[data-q]'), qn = e.target.closest('[data-qn]');
+        if (q) setQty(qty + Number(q.dataset.q));
+        if (qn) setQty(Number(qn.dataset.qn) === qty ? 1 : qn.dataset.qn);
+      });
+      qIn.addEventListener('input', () => { if (qIn.value !== '') setQty(qIn.value); });
+      qIn.addEventListener('blur', () => setQty(qIn.value));
+      qIn.addEventListener('focus', () => qIn.select());
+    }
+    // Ubah jumlah barang yang barusan discan langsung dari kotak hasil
+    const lineEditor = (line) => {
+      const res = $('.scan-result', sh.el); if (!res || !opts.onLineQty) return;
+      const paint = (info) => {
+        let ed = $('.scan-line', res);
+        if (!info || !info.qty) { if (ed) ed.remove(); return; }
+        if (!ed) { ed = document.createElement('div'); ed.className = 'scan-line'; res.appendChild(ed); }
+        ed.innerHTML = '<span class="muted">Jumlah di keranjang</span><div class="stepper"><button type="button" data-lq="-1" aria-label="Kurangi">' + icon('minus', 'sm') + '</button><span class="v">' + info.qty + '</span><button class="plus" type="button" data-lq="1" aria-label="Tambah">' + icon('plus', 'sm') + '</button></div>';
+        if (info.sub) { const s = $('.s', res); if (s) s.textContent = info.sub; }
+      };
+      res.onclick = (e) => { const b = e.target.closest('[data-lq]'); if (!b) return; const cur = Number(($('.scan-line .v', res) || {}).textContent) || 0; paint(opts.onLineQty(line, cur + Number(b.dataset.lq))); };
+      paint(opts.onLineQty(line, null));
+    };
     const done = (code, manual) => {
       code = String(code || '').trim(); if (!code || closing) return;
       const now = Date.now();
       if (!manual && code === lastCode && now - lastAt < 1500) return;      // cegah dobel dari satu kali arahkan
       lastCode = code; lastAt = now;
       let res;
-      try { res = onCode(code); } catch (e) { res = { error: e.message }; }
+      try { res = onCode(code, qty); } catch (e) { res = { error: e.message }; }
       if (res && res.error) { self.feedback(sh.el, false, res.error, 'Kode: ' + code); return; }
       okCount++;
       self.feedback(sh.el, true, (res && res.label) || ('Kode terbaca: ' + code), res && res.sub, res === false || (res && !res.close) ? okCount : 0);
+      if (res && res.line) lineEditor(res.line);
+      if (opts.qty) setQty(1);                                               // kembali ke 1 untuk scan berikutnya
       const close = res === undefined || res === true || (res && res.close);
       if (close) { closing = true; setTimeout(() => sh.close(), 550); }
     };

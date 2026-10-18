@@ -572,3 +572,20 @@ body.dnd-on, body.dnd-on * { -webkit-user-select: none; user-select: none; curso
 .qm-prev img { width: 100%; height: auto; display: block; background: #fff; border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, .12); }
 .qm-prev figcaption { font-size: 11.5px; text-align: center; color: var(--muted); margin-top: 6px; }
 @media (min-width: 640px) { .qm-prev { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } }
+
+/* v1.3.4 — jumlah per scan */
+.scanner-view.compact { aspect-ratio: auto; width: 100%; height: 38dvh; min-height: 220px; max-height: 420px; }
+.scan-wrap { position: relative; }
+.scan-wrap .qty-badge { position: absolute; z-index: 3; right: 12px; top: 12px; background: var(--p); color: #fff; font-weight: 800; font-size: 22px; padding: 6px 16px; border-radius: 999px; box-shadow: 0 6px 16px rgba(0,0,0,.3); }
+.scan-qty { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line); }
+.scan-qty .lbl { font-weight: 700; font-size: 14px; flex: 1; min-width: 90px; }
+.scan-qty .stepper .v { width: 54px; border: 0; background: transparent; text-align: center; font-weight: 800; font-size: 18px; padding: 0; -moz-appearance: textfield; }
+.scan-qty .stepper .v::-webkit-inner-spin-button, .scan-qty .stepper .v::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.scan-qty .stepper button { width: 40px; height: 40px; }
+.scan-qty .chips { display: flex; gap: 6px; flex: 1 1 100%; }
+.scan-qty .chip { flex: 1; justify-content: center; min-height: 38px; padding: 0 10px; font-weight: 800; }
+.scan-qty .chip.on { background: var(--p); color: #fff; border-color: var(--p); }
+@media (min-width: 560px) { .scan-qty .chips { flex: 0 0 auto; } .scan-qty .chip { flex: none; } }
+.scan-result { flex-wrap: wrap; }
+.scan-result > div:not(.scan-line) { flex: 1 1 0; min-width: 0; }
+.scan-result .scan-line { flex: 1 1 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 13.5px; }
