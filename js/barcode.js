@@ -148,9 +148,11 @@ const Scanner = {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('browser tidak mendukung kamera');
     // Resolusi tinggi + fokus otomatis terus-menerus → barcode kecil hasil cetak tetap terbaca
     const vc = { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] };
-    if ('BarcodeDetector' in window) {
-      const formats = await window.BarcodeDetector.getSupportedFormats().catch(() => []);
-      const want = ['code_128', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_39', 'qr_code'].filter((f) => !formats.length || formats.indexOf(f) > -1);
+    // Pakai pemindai bawaan browser hanya bila benar-benar mendukung format barcode toko (di sebagian
+    // perangkat BarcodeDetector ada tetapi daftar formatnya kosong → tidak pernah terbaca).
+    const formats = 'BarcodeDetector' in window ? await window.BarcodeDetector.getSupportedFormats().catch(() => []) : [];
+    if (formats.indexOf('code_128') > -1 && formats.indexOf('ean_13') > -1) {
+      const want = ['code_128', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_39', 'qr_code'].filter((f) => formats.indexOf(f) > -1);
       const det = new window.BarcodeDetector({ formats: want });
       const video = box.querySelector('video');
       this.stream = await navigator.mediaDevices.getUserMedia({ video: vc, audio: false }).catch(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }));
@@ -170,7 +172,7 @@ const Scanner = {
     box.innerHTML = '<div id="h5scan" style="width:100%;height:100%"></div><div class="frame" style="display:none"></div><div class="hit-ico"></div>';
     const F = window.Html5QrcodeSupportedFormats || {};
     const fmts = ['CODE_128', 'EAN_13', 'EAN_8', 'UPC_A', 'UPC_E', 'CODE_39', 'QR_CODE'].map((k) => F[k]).filter((v) => v !== undefined);
-    this.h5 = new window.Html5Qrcode('h5scan', { formatsToSupport: fmts.length ? fmts : undefined, experimentalFeatures: { useBarCodeDetectorIfSupported: true }, verbose: false });
+    this.h5 = new window.Html5Qrcode('h5scan', { formatsToSupport: fmts.length ? fmts : undefined, experimentalFeatures: { useBarCodeDetectorIfSupported: formats.length > 0 }, verbose: false });
     await this.h5.start({ facingMode: 'environment' }, {
       fps: 15, disableFlip: true,
       qrbox: (w, h) => ({ width: Math.max(200, Math.floor(w * 0.88)), height: Math.max(90, Math.floor(h * 0.42)) }),

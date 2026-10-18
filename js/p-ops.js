@@ -214,7 +214,7 @@ page('stok', {
           '<div class="row" style="gap:6px"><button class="icon-btn soft" data-act="stock-in" data-o="PRODUK" data-id="' + esc(p.produk_id) + '" type="button" aria-label="Stok masuk">' + icon('plus', 'sm') + '</button>' +
           (App.isOwner ? '<button class="icon-btn ghost-border" data-act="adjust" data-o="PRODUK" data-id="' + esc(p.produk_id) + '" type="button" aria-label="Koreksi">' + icon('pencil', 'sm') + '</button>' : '') + '</div></div>';
       }).join('') + '</div>' : emptyState('package', 'Tidak ada produk stok jadi', 'Produk racik (minuman) memakai stok bahan baku.')) +
-        '<div class="help" style="margin-top:12px">' + icon('info', 'xs') + 'Produk "racik" (kopi, minuman) mengurangi stok bahan baku sesuai resep secara otomatis.</div>';
+        '<div class="help" style="margin-top:12px">' + icon('info', 'xs') + 'Produk "racik" (minuman, menu racikan) mengurangi stok bahan baku sesuai resep secara otomatis.</div>';
     } else if (this.st.tab === 'bahan') {
       const list = (App.boot.materials || []).filter((m) => !q || m.nama.toLowerCase().indexOf(q) > -1).sort((a, b) => toNum(a.stok) / Math.max(1, toNum(a.stok_minimum)) - toNum(b.stok) / Math.max(1, toNum(b.stok_minimum)));
       body.innerHTML = list.length ? '<div class="card" style="padding:0 16px">' + list.map((m) => {

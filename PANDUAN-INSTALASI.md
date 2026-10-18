@@ -1,4 +1,4 @@
-# 📋 Panduan Instalasi — Qasir v1.3.1
+# 📋 Panduan Instalasi — Qasir v1.3.3
 
 Qasir terdiri dari dua bagian:
 
@@ -41,7 +41,7 @@ Waktu yang dibutuhkan: ± 30–45 menit untuk pertama kali.
       Akun owner  : owner / 123456
       Akun kasir  : kasir1 / 111111
    ```
-4. Cek Google Drive Anda — harus ada folder **📁 Qasir - Toko Roti Visena** berisi spreadsheet **🗃️ Qasir DB** dan folder `Logo`, `Foto Produk`, `Bukti Bayar`, `Laporan`.
+4. Cek Google Drive Anda — harus ada folder **📁 Qasir - Kedai Rasa Nusantara** berisi spreadsheet **🗃️ Qasir DB** dan folder `Logo`, `Foto Produk`, `Bukti Bayar`, `Laporan`.
 
 > ⚠️ **Jangan jalankan `setupAppEnvironment` dua kali.** Kalau tidak sengaja, skrip akan menolak dan hanya menampilkan link spreadsheet yang sudah ada.
 >
@@ -167,7 +167,7 @@ Tanda berhasil: muncul `Writing objects: 100%` dan `* [new branch] main -> main`
 2. Login **owner / 123456**.
 3. **Segera ganti PIN bawaan:** menu **Lainnya → Karyawan** → ikon 🔒 pada akun Pemilik dan akun Rina (kasir1) → isi PIN baru 6 digit.
 4. **Lainnya → Pengaturan Toko:** isi nama brand, alamat, No. WA, email penerima laporan, unggah logo, pilih warna tema → **Simpan Pengaturan**. Warna & logo langsung berlaku di semua perangkat.
-5. **Hapus/ubah data contoh:** menu **Produk**, **Bahan & Biaya**, **Promo** sudah berisi contoh (roti, donat, kopi). Ubah sesuai menu toko Anda — HPP & rekomendasi harga otomatis menyesuaikan.
+5. **Hapus/ubah data contoh:** menu **Produk**, **Bahan & Biaya**, **Promo** sudah berisi contoh menu (makanan, minuman, kue & snack). Ubah sesuai menu toko Anda — HPP & rekomendasi harga otomatis menyesuaikan.
 6. **Buka Toko** dari Dashboard (isi modal kas). Kasir hanya bisa menyimpan transaksi saat toko berstatus **buka**.
 7. Di akhir hari: Dashboard → **Tutup Toko** → isi kas aktual → laporan + PDF terkirim ke email dan tersimpan di folder Drive `Laporan`.
 
@@ -257,14 +257,22 @@ Data Anda (produk, transaksi, pengaturan) **tidak berubah** — cukup ganti kode
 4. Dari folder `qasir`:
    ```bash
    git add .
-   git commit -m "Update Qasir v1.3.1"
+   git commit -m "Update Qasir v1.3.3"
    git push
    ```
-5. Tunggu 1–2 menit. Di HP/laptop kasir, tutup aplikasi lalu buka lagi — versi baru otomatis terpasang (versi sudah dinaikkan ke `qasir-v1.3.1` di `sw.js`).
+5. Tunggu 1–2 menit. Di HP/laptop kasir, tutup aplikasi lalu buka lagi — versi baru otomatis terpasang (versi sudah dinaikkan ke `qasir-v1.3.3` di `sw.js`).
 
 > ⚠️ **Update ke v1.3 wajib mengganti `Kode.gs` juga** (ada fitur server baru untuk Jual Online). Setelah *New version* di-deploy, permintaan pertama otomatis menambah sheet **PesananOnline**, kolom **kanal** di sheet Promo, dan folder Drive **Toko Online** — data lama tidak berubah. Jangan jalankan `setupAppEnvironment` lagi.
 
-> 🔁 **Sudah memasang v1.3? Update ke v1.3.1:** ganti isi folder repo dengan isi ZIP baru (tetap pakai `js/config.js` lama), lalu `git add . && git commit -m "Update Qasir v1.3.1" && git push`. Ganti juga `Kode.gs` → *Deploy → Manage deployments → ✏️ → Version: New version → Deploy* agar pengecekan status toko lebih hemat kuota (tanpa ini pun tetap berjalan, hanya lebih boros).
+> 🔁 **Sudah memasang v1.3? Update ke v1.3.1:** ganti isi folder repo dengan isi ZIP baru (tetap pakai `js/config.js` lama), lalu `git add . && git commit -m "Update Qasir v1.3.3" && git push`. Ganti juga `Kode.gs` → *Deploy → Manage deployments → ✏️ → Version: New version → Deploy* agar pengecekan status toko lebih hemat kuota (tanpa ini pun tetap berjalan, hanya lebih boros).
+
+**Yang baru di v1.3.3:**
+- Perbaikan scan barcode kamera: di perangkat yang pemindai bawaannya tidak mendukung barcode toko, Qasir otomatis memakai pemindai cadangan sehingga barcode tetap bisa dibaca.
+
+**Yang baru di v1.3.2:**
+- Branding umum untuk **UMKM makanan & minuman** (warung makan, kedai kopi & minuman, toko kue, jajanan & snack, katering) — teks deskripsi aplikasi & contoh isian diperbarui.
+- Contoh menu bawaan untuk pemasangan **baru**: Nasi Ayam Geprek, Nasi Goreng Spesial, Pisang Goreng Keju, Puding Coklat, Kopi Susu Aren, Americano, Es Teh Tarik, Es Coklat, Cireng (toko contoh: *Kedai Rasa Nusantara*). Toko yang sudah terpasang **tidak berubah** — data Anda tetap.
+- Update cukup frontend (ZIP). `Kode.gs` hanya berisi perubahan contoh menu untuk pemasangan baru, jadi boleh tidak diganti.
 
 **Yang baru di v1.3.1:**
 - Saklar **Jual Online** langsung tersimpan — toko online seketika **terbuka/tertutup** tanpa menekan Simpan. Tab toko di perangkat yang sama berubah saat itu juga; HP pelanggan berubah otomatis ±10 detik tanpa muat ulang. Begitu juga saat **Buka/Tutup Toko**.

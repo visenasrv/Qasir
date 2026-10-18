@@ -271,7 +271,7 @@ const MENU_STYLES = {
   kafe: { nama: 'Kafe hangat', id: 'nuansa kafe hangat & rustic: latar kertas kraft/kayu, ornamen tangan sederhana, judul kategori bergaya hand-lettering, warna hangat', en: 'warm rustic café look: kraft paper or wood background, simple hand-drawn ornaments, hand-lettered category headings, warm tones' },
   kapur: { nama: 'Papan kapur', id: 'gaya papan kapur (chalkboard) hitam dengan tulisan kapur putih & aksen kapur berwarna, ilustrasi doodle kecil', en: 'black chalkboard style with white chalk lettering and colored chalk accents, small doodle illustrations' },
   modern: { nama: 'Modern minimalis', id: 'modern minimalis: latar terang polos, grid rapi, banyak ruang kosong, huruf sans-serif bersih', en: 'modern minimalist: clean light background, tidy grid, generous whitespace, clean sans-serif type' },
-  ceria: { nama: 'Ceria & colorful', id: 'ceria & penuh warna: bentuk membulat, stiker, latar warna cerah, cocok untuk jajanan & donat', en: 'cheerful & colorful: rounded shapes, sticker accents, bright backgrounds, great for snacks & donuts' },
+  ceria: { nama: 'Ceria & colorful', id: 'ceria & penuh warna: bentuk membulat, stiker, latar warna cerah, cocok untuk jajanan, minuman & dessert', en: 'cheerful & colorful: rounded shapes, sticker accents, bright backgrounds, great for snacks & donuts' },
   premium: { nama: 'Premium elegan', id: 'premium elegan: latar gelap, aksen emas tipis, huruf serif, kesan mewah', en: 'premium elegant: dark background, thin gold accents, serif typography, luxurious feel' }
 };
 const MENU_LAYOUTS = {

@@ -1,6 +1,6 @@
-# Qasir v1.3.1
+# Qasir v1.3.3
 
-Aplikasi kasir (POS) untuk usaha jajanan, roti, donat & kopi. Frontend statis (GitHub Pages) + backend Google Apps Script sebagai REST API, data di Google Sheets & Google Drive.
+Aplikasi kasir (POS) untuk UMKM makanan & minuman — warung makan, kedai kopi & minuman, toko kue, jajanan & snack, katering. Frontend statis (GitHub Pages) + backend Google Apps Script sebagai REST API, data di Google Sheets & Google Drive.
 
 **Panduan pemasangan lengkap:** lihat [`PANDUAN-INSTALASI.md`](PANDUAN-INSTALASI.md).
 

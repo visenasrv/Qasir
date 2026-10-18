@@ -1,7 +1,7 @@
 {
   "name": "Qasir",
   "short_name": "Qasir",
-  "description": "Kasir cepat untuk UMKM jajanan, roti, donat & kopi. Tetap jalan saat offline.",
+  "description": "Kasir cepat untuk UMKM makanan & minuman. Tetap jalan saat offline.",
   "start_url": "./#/",
   "scope": "./",
   "display": "standalone",
