@@ -1,4 +1,4 @@
-# 📋 Panduan Instalasi — Qasir v1.3
+# 📋 Panduan Instalasi — Qasir v1.3.1
 
 Qasir terdiri dari dua bagian:
 
@@ -257,12 +257,19 @@ Data Anda (produk, transaksi, pengaturan) **tidak berubah** — cukup ganti kode
 4. Dari folder `qasir`:
    ```bash
    git add .
-   git commit -m "Update Qasir v1.3"
+   git commit -m "Update Qasir v1.3.1"
    git push
    ```
-5. Tunggu 1–2 menit. Di HP/laptop kasir, tutup aplikasi lalu buka lagi — versi baru otomatis terpasang (versi sudah dinaikkan ke `qasir-v1.3.0` di `sw.js`).
+5. Tunggu 1–2 menit. Di HP/laptop kasir, tutup aplikasi lalu buka lagi — versi baru otomatis terpasang (versi sudah dinaikkan ke `qasir-v1.3.1` di `sw.js`).
 
 > ⚠️ **Update ke v1.3 wajib mengganti `Kode.gs` juga** (ada fitur server baru untuk Jual Online). Setelah *New version* di-deploy, permintaan pertama otomatis menambah sheet **PesananOnline**, kolom **kanal** di sheet Promo, dan folder Drive **Toko Online** — data lama tidak berubah. Jangan jalankan `setupAppEnvironment` lagi.
+
+> 🔁 **Sudah memasang v1.3? Update ke v1.3.1:** ganti isi folder repo dengan isi ZIP baru (tetap pakai `js/config.js` lama), lalu `git add . && git commit -m "Update Qasir v1.3.1" && git push`. Ganti juga `Kode.gs` → *Deploy → Manage deployments → ✏️ → Version: New version → Deploy* agar pengecekan status toko lebih hemat kuota (tanpa ini pun tetap berjalan, hanya lebih boros).
+
+**Yang baru di v1.3.1:**
+- Saklar **Jual Online** langsung tersimpan — toko online seketika **terbuka/tertutup** tanpa menekan Simpan. Tab toko di perangkat yang sama berubah saat itu juga; HP pelanggan berubah otomatis ±10 detik tanpa muat ulang. Begitu juga saat **Buka/Tutup Toko**.
+- **QR Meja**: atur mulai nomor & jumlah QR, pilih ukuran (1/2/4/6/9 per A4), lihat **pratinjau**, lalu **Unduh PDF**, **Unduh PNG**, atau **Cetak**.
+- **Urutan menu & produk** dan **banner** diatur dengan **drag & drop** (tahan ikon ⋮⋮ lalu geser; di laptop juga bisa pakai tombol panah ↑↓).
 
 **Yang baru di v1.3 — Jual Online:**
 - Toko online untuk pelanggan di alamat `https://USERNAME.github.io/qasir/toko.html` (tanpa login, satu situs dengan aplikasi kasir).
@@ -299,20 +306,24 @@ Data Anda (produk, transaksi, pengaturan) **tidak berubah** — cukup ganti kode
 
 ### H1. Mengaktifkan toko online
 1. Login sebagai **Pemilik** → **Lainnya → Jual Online** (atau menu samping *Promosi → Jual Online*).
-2. Nyalakan saklar **Jual Online**, lalu atur bagian-bagian berikut (ketuk judul untuk membuka):
+2. Nyalakan saklar **Jual Online** — langsung tersimpan, toko online seketika terbuka (matikan saklar = toko online seketika tertutup). Lalu atur bagian-bagian berikut (ketuk judul untuk membuka):
    - **Banner & pengumuman** — unggah gambar banner (otomatis dipotong 2:1), judul, keterangan, dan bisa ditautkan ke produk. Pengumuman tampil di bagian atas (mis. *"Varian baru Matcha Latte sudah tersedia!"*).
-   - **Urutan menu & produk tampil** — tombol ▲▼ untuk mengatur urutan kategori dan produk; saklar untuk menyembunyikan produk dari toko online saja.
+   - **Urutan menu & produk tampil** — tahan ikon titik-titik ⋮⋮ lalu **geser** kategori ke atas/bawah. Ketuk nama kategori untuk membuka produknya, lalu geser produk dengan cara yang sama. Saklar di tiap produk = tampil/sembunyi di toko online saja. Banner juga bisa digeser untuk mengatur urutannya.
    - **Best seller & label baru** — pilih produk unggulan (atau *Isi dari 5 terlaris 30 hari*), dan beri label **Baru / Varian baru: …** pada produk tertentu.
    - **Diskon & promo online** — kelola di menu **Promo**; di form promo pilih **Berlaku di: Kasir & Online / Kasir saja / Online saja**. Diskon tampil otomatis sebagai harga coret & label di toko online.
    - **Cara pesan & ongkir** — Ambil di toko, Diantar (ongkir), Makan di tempat (QR meja), minimal pesanan, jam buka, dan opsi *Terima pesanan saat toko tutup* (pre-order).
    - **Pembayaran** — Bayar di tempat dan/atau Transfer/QRIS (unggah gambar QRIS & tulis info rekening).
-3. Tekan **Simpan Pengaturan Toko Online**. Tombol **Lihat Toko** membuka tampilan pelanggan.
+3. Tekan **Simpan Perubahan** (tombol bawah bertanda titik kuning bila ada perubahan belum disimpan; berubah jadi *Tersimpan* setelah berhasil). Tombol **Lihat Toko** membuka tampilan pelanggan — bila ada perubahan belum disimpan, otomatis disimpan dulu.
 4. Tambahkan **deskripsi singkat** di form Produk agar tampil di toko online (opsional).
 
 ### H2. Membagikan ke pelanggan
 - **Salin link** atau **Bagikan** ke WhatsApp/status/Instagram.
 - **QR Toko** → unduh PNG untuk ditempel di etalase/kasir/brosur.
-- **QR Meja** → cetak A4 berisi QR "MEJA 1, 2, 3…" (jumlah meja diatur di *Cara pesan*). Saat discan, nomor meja otomatis terisi dan pelanggan langsung memesan *makan di tempat*.
+- **QR Meja** → muncul jendela pengaturan:
+  1. **Mulai dari meja no.** (mis. 1, atau 11 bila mencetak tambahan) dan **Jumlah QR dicetak** (tombol − / + atau pilihan cepat 5/10/15/20/30 meja, maks. 100).
+  2. **Ukuran QR per kertas A4**: 1 (stand meja), 2 besar, 4, 6, atau 9 kecil. **Teks di bawah nomor meja** bisa diubah.
+  3. Periksa **pratinjau** halaman, lalu pilih **PDF** (semua halaman dalam satu file), **PNG** (gambar per halaman, 200 dpi), atau **Cetak**.
+  Saat discan, nomor meja otomatis terisi dan pelanggan langsung memesan *makan di tempat*. Pastikan *Makan di tempat (QR meja)* sudah aktif di bagian *Cara pesan*.
 
 ### H3. Alur pesanan di kasir
 1. Pesanan baru muncul di tab **Pesanan** (bunyi "ting-tung" + badge merah). Toko harus **dibuka** agar pesanan bisa diterima.
@@ -323,4 +334,4 @@ Data Anda (produk, transaksi, pengaturan) **tidak berubah** — cukup ganti kode
 
 Pelanggan melihat status pesanannya otomatis (Menunggu konfirmasi → Diterima → Selesai / Ditolak) dan bisa membuka lagi lewat ikon 🧾 *Pesanan saya*.
 
-> **Catatan:** pesanan online butuh internet (di sisi pelanggan dan kasir). Notifikasi pesanan baru dicek ±15 detik sekali selama aplikasi kasir terbuka. Penjualan online masuk ke laporan, dashboard, dan laporan tutup toko seperti transaksi biasa (sumber: ONLINE). Ongkos kirim tercatat sebagai baris "Ongkos kirim".
+> **Catatan:** pesanan online butuh internet (di sisi pelanggan dan kasir). Notifikasi pesanan baru dicek ±15 detik sekali selama aplikasi kasir terbuka. Halaman toko pelanggan memeriksa status toko ±10 detik sekali selama dibuka (±45 detik bila tidak disentuh 10 menit) dan langsung memeriksa saat halaman dibuka kembali. Penjualan online masuk ke laporan, dashboard, dan laporan tutup toko seperti transaksi biasa (sumber: ONLINE). Ongkos kirim tercatat sebagai baris "Ongkos kirim".

@@ -388,7 +388,7 @@
   const STATUS = { BARU: ['Menunggu konfirmasi', 'clock', 'warn'], DITERIMA: ['Diterima & sedang disiapkan', 'check', 'info'], SELESAI: ['Selesai', 'check', 'ok'], DITOLAK: ['Ditolak', 'x', 'bad'], DIBATALKAN: ['Dibatalkan', 'x', 'bad'] };
   function openStatus(o, fresh) {
     const s = sheet({ title: 'Pesanan ' + o.kode, body: '<div class="js-st"><div class="spinner" style="margin:30px auto"></div></div>', foot: '<button class="btn outline block lg" data-x type="button">Kembali ke menu</button>' });
-    let stop = false, last = '';
+    s.keep = true; let stop = false, last = '';
     s.el.addEventListener('click', (e) => { if (e.target.closest('[data-x]')) stop = true; });
     const tick = async () => {
       if (stop || !s.el.isConnected) return;
@@ -423,21 +423,58 @@
     s.el.addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) { s.close(); openStatus(h[Number(b.dataset.i)]); } });
   }
 
-  /* ------------------------------------------------------------- Start */
-  async function load() {
-    const cached = LS.get('shop', null);
-    if (cached) { S = cached; render(); }
-    const r = await api('shopInfo', {}, { tries: cached ? 1 : 3 });
-    if (r.ok) {
-      const changed = !cached || JSON.stringify(cached) !== JSON.stringify(r.data);
-      S = r.data; LS.set('shop', S);
-      if (changed) { const y = window.scrollY; render(); window.scrollTo(0, y); }
-      const pm = P(); cart = cart.filter((l) => pm[l.produk_id]); LS.set('cart', cart); renderCartBar();
-    } else if (!cached) {
-      $('#shop').innerHTML = '<div class="shop-off">' + icon('wifi-off', 'lg') + '<h2>Gagal memuat toko</h2><p class="muted">' + esc(r.error || '') + '</p><button class="btn primary" type="button" onclick="location.reload()">' + icon('refresh', 'sm') + 'Coba lagi</button></div>';
+  /* ------------------------------------------------------------- Start & pembaruan langsung */
+  // Status toko (aktif / buka / tutup) diperbarui otomatis tanpa muat ulang:
+  //  • perangkat lain  → cek versi data ke server tiap 10 dtk (respons kecil bila tak berubah)
+  //  • perangkat sama  → admin menyimpan → sinyal localStorage 'qshop:ping' → muat seketika
+  let loading = null, lastAct = Date.now(), pollT = 0;
+  function applyShop(d, cachedPrev) {
+    const prev = cachedPrev || S;
+    const changed = !prev || JSON.stringify(prev) !== JSON.stringify(d);
+    S = d; LS.set('shop', S);
+    if (changed) {
+      if (prev && prev.aktif !== undefined) {
+        if (prev.aktif && !d.aktif) { sheets.filter((x) => !x.keep).slice().forEach((x) => x.close()); toast('Pemesanan online baru saja ditutup oleh toko.', 'warn', 4000); }
+        else if (!prev.aktif && d.aktif) toast('Toko online sudah dibuka — silakan pesan! 🎉', 'ok', 3500);
+        else if (d.aktif && prev.buka !== d.buka) toast(d.buka ? 'Toko sekarang BUKA 🎉' : 'Toko baru saja tutup', d.buka ? 'ok' : 'warn', 3500);
+      }
+      const y = window.scrollY, q = $('.js-q') ? $('.js-q').value : '';
+      render(); window.scrollTo(0, y);
+      const qi = $('.js-q'); if (q && qi) { qi.value = q; qi.dispatchEvent(new Event('input')); }
     }
+    const pm = P(); cart = cart.filter((l) => pm[l.produk_id]); LS.set('cart', cart); renderCartBar();
   }
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S) load(); });
+  async function load(force) {
+    if (loading) return loading;
+    loading = (async () => {
+      let stale = false; try { stale = !!localStorage.getItem('qshop:stale'); } catch (e) {}
+      const cached = LS.get('shop', null);
+      if (!S && cached && !stale) { S = cached; render(); }
+      const quick = S && S.v && !force && !stale;
+      const r = await api('shopInfo', quick ? { v: S.v } : {}, { tries: S ? 1 : 3, timeout: 20000 });
+      if (r.ok) {
+        try { localStorage.removeItem('qshop:stale'); } catch (e) {}
+        if (r.data && r.data.same) return;           // tidak ada perubahan
+        applyShop(r.data, S || cached);
+      } else if (!S) {
+        if (cached) { S = cached; render(); return; }
+        $('#shop').innerHTML = '<div class="shop-off">' + icon('wifi-off', 'lg') + '<h2>Gagal memuat toko</h2><p class="muted">' + esc(r.error || '') + '</p><button class="btn primary" type="button" onclick="location.reload()">' + icon('refresh', 'sm') + 'Coba lagi</button></div>';
+      }
+    })();
+    try { await loading; } finally { loading = null; }
+  }
+  function schedule() {
+    clearTimeout(pollT);
+    const idle = Date.now() - lastAct > 10 * 60000;            // 10 menit tanpa aktivitas → hemat kuota
+    pollT = setTimeout(async () => { if (document.visibilityState === 'visible' && navigator.onLine !== false) await load(); schedule(); }, idle ? 45000 : 10000);
+  }
+  ['pointerdown', 'keydown', 'scroll'].forEach((ev) => addEventListener(ev, () => { const was = Date.now() - lastAct > 10 * 60000; lastAct = Date.now(); if (was) { load(); schedule(); } }, { passive: true }));
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S) { load(); schedule(); } });
+  addEventListener('online', () => load());
+  addEventListener('focus', () => { if (S) load(); });
+  addEventListener('storage', (e) => { if (e.key === 'qshop:ping') load(true); });
+  try { if ('BroadcastChannel' in window) new BroadcastChannel('qasir-shop').onmessage = () => load(true); } catch (e) {}
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheets.length) sheets[sheets.length - 1].close(); });
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', load); else load();
+  const start = () => { load(); schedule(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

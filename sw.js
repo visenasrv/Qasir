@@ -1,11 +1,11 @@
 /* QASIR — Service Worker: app shell cache-first → aplikasi terbuka instan & tetap jalan offline.
    Naikkan VERSION setiap kali Anda mengubah file frontend agar perangkat mengambil versi baru. */
-const VERSION = 'qasir-v1.3.0';
+const VERSION = 'qasir-v1.3.1';
 const SHELL = [
-  './', 'index.html', 'manifest.webmanifest', 'css/style.css?v=1.3.0',
-  'js/config.js?v=1.3.0', 'js/icons.js?v=1.3.0', 'js/core.js?v=1.3.0', 'js/export.js?v=1.3.0', 'js/hpp.js?v=1.3.0', 'js/barcode.js?v=1.3.0',
-  'js/printer.js?v=1.3.0', 'js/p-kasir.js?v=1.3.0', 'js/p-ops.js?v=1.3.0', 'js/p-owner.js?v=1.3.0', 'js/p-promo.js?v=1.3.0', 'js/p-online.js?v=1.3.0', 'js/app.js?v=1.3.0',
-  'toko.html', 'css/toko.css?v=1.3.0', 'js/toko.js?v=1.3.0', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'
+  './', 'index.html', 'manifest.webmanifest', 'css/style.css?v=1.3.1',
+  'js/config.js?v=1.3.1', 'js/icons.js?v=1.3.1', 'js/core.js?v=1.3.1', 'js/export.js?v=1.3.1', 'js/hpp.js?v=1.3.1', 'js/barcode.js?v=1.3.1',
+  'js/printer.js?v=1.3.1', 'js/p-kasir.js?v=1.3.1', 'js/p-ops.js?v=1.3.1', 'js/p-owner.js?v=1.3.1', 'js/p-promo.js?v=1.3.1', 'js/p-online.js?v=1.3.1', 'js/app.js?v=1.3.1',
+  'toko.html', 'css/toko.css?v=1.3.1', 'js/toko.js?v=1.3.1', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
 const RUNTIME = VERSION + '-rt';
 

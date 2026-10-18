@@ -173,7 +173,14 @@ async function api(action, data, opt) {
     if (res.ok || !res.retryable) break;
   }
   if (!res.ok && res.code === 'AUTH' && App.session) Auth.onTokenExpired();
+  if (res.ok && SHOP_ACTIONS.test(action)) shopPing();
   return res;
+}
+/** Beri tahu tab toko online (toko.html) di perangkat ini agar langsung memuat data terbaru. */
+const SHOP_ACTIONS = /^(saveOnlineConfig|openStore|closeStore|saveProduct|deleteProduct|saveCategory|deleteCategory|savePromo|deletePromo|saveSettings|saveVariants?)$/;
+function shopPing() {
+  try { localStorage.setItem('qshop:stale', '1'); localStorage.setItem('qshop:ping', String(Date.now())); } catch (e) {}
+  try { if ('BroadcastChannel' in window) { const b = new BroadcastChannel('qasir-shop'); b.postMessage(Date.now()); b.close(); } } catch (e) {}
 }
 function warmUpServer() { if (GAS_URL && GAS_URL.indexOf('GANTI_DENGAN') < 0) fetch(GAS_URL + '?ping=' + Date.now(), { mode: 'no-cors', cache: 'no-store' }).catch(() => {}); }
 

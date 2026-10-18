@@ -1,4 +1,4 @@
-# Qasir v1.3
+# Qasir v1.3.1
 
 Aplikasi kasir (POS) untuk usaha jajanan, roti, donat & kopi. Frontend statis (GitHub Pages) + backend Google Apps Script sebagai REST API, data di Google Sheets & Google Drive.
 
@@ -14,7 +14,7 @@ Aplikasi kasir (POS) untuk usaha jajanan, roti, donat & kopi. Frontend statis (G
 - **Kalkulator HPP** dari resep + kemasan + alokasi biaya operasional, 3 rekomendasi harga, food cost, mode simulasi.
 - **Produk, Bahan & Biaya, Promo, Karyawan & Perangkat, Pengaturan brand** (logo, warna tema, struk, aturan bisnis).
 - **Daftar Menu** (gambar/PDF/teks WA), **Prompt Menu AI** (menu dengan foto produk), **Prompt Poster Promo** (ID/EN untuk AI gambar), **Cetak Label Barcode** (A4 3×8 / thermal).
-- **Jual Online** (`toko.html`): toko online pelanggan via link & QR meja — ambil/antar/makan di tempat, bayar di tempat atau transfer/QRIS + bukti; banner, pengumuman, urutan menu, best seller, label baru, promo khusus online; pesanan masuk ke **Pesanan Online** (bunyi + badge), stok berkurang saat diterima.
+- **Jual Online** (`toko.html`): toko online pelanggan via link & QR meja — ambil/antar/makan di tempat, bayar di tempat atau transfer/QRIS + bukti; banner, pengumuman, urutan menu, best seller, label baru, promo khusus online; pesanan masuk ke **Pesanan Online** (bunyi + badge), stok berkurang saat diterima. Saklar buka/tutup toko online berlaku seketika, QR meja dengan pratinjau + unduh PDF/PNG/cetak, urutan menu & banner dengan drag & drop.
 - **Tutup Toko** → laporan email + PDF otomatis ke pemilik.
 
 ## Struktur

@@ -219,6 +219,165 @@ async function qrCanvas(text, o) {
   if (o.foot) { x.fillStyle = '#6B7280'; x.font = '600 30px "Plus Jakarta Sans", Arial, sans-serif'; x.textAlign = 'center'; x.fillText(o.foot, qs / 2, y + 20, qs - 40); }
   return c;
 }
+/* ------------------------------------------------------- Drag & drop (sentuh + mouse + keyboard) */
+function makeSortable(list, o) {
+  if (!list || list._sortable) return; list._sortable = true;
+  const items = () => Array.from(list.children).filter((x) => x.matches(o.item));
+  const ids = () => items().map((x) => x.dataset.id);
+  const flip = (mut) => {
+    const els = items(), before = new Map(els.map((x) => [x, x.getBoundingClientRect().top]));
+    mut();
+    els.forEach((x) => { if (x.classList.contains('dnd-drag')) return; const d = before.get(x) - x.getBoundingClientRect().top; if (!d) return; x.style.transition = 'none'; x.style.transform = 'translateY(' + d + 'px)'; x.getBoundingClientRect(); x.style.transition = 'transform .16s ease'; x.style.transform = ''; });
+  };
+  list.addEventListener('keydown', (e) => {
+    const h = e.target.closest(o.handle); if (!h || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+    const it = h.closest(o.item); if (!it || it.parentElement !== list) return;
+    e.preventDefault(); e.stopPropagation();
+    const all = items(), i = all.indexOf(it), j = i + (e.key === 'ArrowUp' ? -1 : 1); if (j < 0 || j >= all.length) return;
+    flip(() => list.insertBefore(it, e.key === 'ArrowUp' ? all[j] : all[j].nextSibling)); h.focus();
+    o.onEnd(ids());
+  });
+  list.addEventListener('pointerdown', (e) => {
+    const h = e.target.closest(o.handle); if (!h || e.button > 0) return;
+    const it = h.closest(o.item); if (!it || it.parentElement !== list) return;
+    e.preventDefault(); e.stopPropagation();
+    if (o.onStart) o.onStart(it);
+    const r = it.getBoundingClientRect(), dy = Math.max(8, Math.min(r.height - 8, e.clientY - r.top));
+    const ph = document.createElement('div'); ph.className = 'dnd-ph'; ph.style.height = r.height + 'px';
+    list.insertBefore(ph, it);
+    Object.assign(it.style, { position: 'fixed', left: r.left + 'px', top: (e.clientY - dy) + 'px', width: r.width + 'px', zIndex: 1200, pointerEvents: 'none', margin: 0 });
+    it.classList.add('dnd-drag'); document.body.classList.add('dnd-on');
+    if (navigator.vibrate) try { navigator.vibrate(12); } catch (err) {}
+    let y = e.clientY, raf = 0, alive = true;
+    const place = () => {
+      const sibs = items().filter((x) => x !== it); let target = null;
+      for (const s of sibs) { const b = s.getBoundingClientRect(); if (y < b.top + b.height / 2) { target = s; break; } }
+      let n = ph.nextElementSibling; while (n === it) n = n.nextElementSibling;
+      if (n !== target) flip(() => list.insertBefore(ph, target || (sibs.length ? sibs[sibs.length - 1].nextSibling : null)));
+    };
+    const loop = () => {
+      if (!alive) return;
+      const edge = 80, H = innerHeight; let v = 0;
+      if (y < edge) v = -Math.ceil((edge - y) / 5); else if (y > H - edge - 70) v = Math.ceil((y - (H - edge - 70)) / 5);
+      if (v) { scrollBy(0, v); place(); }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    const move = (ev) => { y = ev.clientY; it.style.top = (y - dy) + 'px'; place(); };
+    const end = () => {
+      alive = false; cancelAnimationFrame(raf);
+      removeEventListener('pointermove', move); removeEventListener('pointerup', end); removeEventListener('pointercancel', end);
+      list.insertBefore(it, ph); ph.remove();
+      ['position', 'left', 'top', 'width', 'zIndex', 'pointerEvents', 'margin'].forEach((k) => { it.style[k] = ''; });
+      it.classList.remove('dnd-drag'); document.body.classList.remove('dnd-on');
+      it.classList.add('dnd-drop'); setTimeout(() => it.classList.remove('dnd-drop'), 400);
+      o.onEnd(ids(), it);
+    };
+    addEventListener('pointermove', move, { passive: true }); addEventListener('pointerup', end); addEventListener('pointercancel', end);
+  });
+}
+
+/* ------------------------------------------------------- QR Meja: halaman A4 siap cetak */
+const QR_LAYOUT = { 1: [1, 1], 2: [1, 2], 4: [2, 2], 6: [2, 3], 9: [3, 3] };
+async function qrMejaPages(o) {
+  // o: {from, count, per, dpi, title, foot}
+  await loadScript(QR_LIB);
+  try { await document.fonts.load('800 40px "Plus Jakarta Sans"'); } catch (e) {}
+  const mm = (v) => Math.round(v * o.dpi / 25.4), [cols, rows] = QR_LAYOUT[o.per] || [2, 3];
+  const W = mm(210), H = mm(297), M = mm(10), G = mm(6);
+  const cw = Math.floor((W - M * 2 - G * (cols - 1)) / cols), ch = Math.floor((H - M * 2 - G * (rows - 1)) / rows);
+  const col = getComputedStyle(document.documentElement).getPropertyValue('--p').trim() || '#F26B1D';
+  const font = (w, px) => w + ' ' + px + 'px "Plus Jakarta Sans", Arial, sans-serif';
+  const nums = []; for (let i = 0; i < o.count; i++) nums.push(o.from + i);
+  const pages = [];
+  for (let p = 0; p < nums.length; p += o.per) {
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+    nums.slice(p, p + o.per).forEach((n, k) => {
+      const cx = M + (k % cols) * (cw + G), cy = M + Math.floor(k / cols) * (ch + G);
+      // garis potong
+      x.save(); x.strokeStyle = '#C7C7C7'; x.lineWidth = Math.max(1, mm(0.3)); x.setLineDash([mm(2), mm(1.5)]);
+      const rr = mm(4); x.beginPath(); x.moveTo(cx + rr, cy); x.arcTo(cx + cw, cy, cx + cw, cy + ch, rr); x.arcTo(cx + cw, cy + ch, cx, cy + ch, rr); x.arcTo(cx, cy + ch, cx, cy, rr); x.arcTo(cx, cy, cx + cw, cy, rr); x.closePath(); x.stroke(); x.restore();
+      const unit = Math.min(cw, ch * 0.78);                       // skala teks mengikuti ukuran kartu
+      const tH = o.title ? Math.round(unit * 0.13) : 0, mH = Math.round(unit * 0.17), fH = o.foot ? Math.round(unit * 0.09) : 0, pad = Math.round(unit * 0.06);
+      const qrMax = Math.min(cw - pad * 2, ch - pad * 2 - tH - mH - fH);
+      const q = window.qrcode(0, 'M'); q.addData(shopUrl(String(n))); q.make();
+      const mc = q.getModuleCount(), quiet = 2, cell = Math.max(1, Math.floor(qrMax / (mc + quiet * 2))), qs = cell * (mc + quiet * 2);
+      const block = tH + qs + mH + fH; let y = cy + Math.round((ch - block) / 2);
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      if (o.title) { x.fillStyle = col; x.font = font(800, Math.round(tH * 0.62)); x.fillText(o.title, cx + cw / 2, y + tH / 2, cw - pad * 2); y += tH; }
+      const qx = Math.round(cx + (cw - qs) / 2); x.fillStyle = '#111';
+      for (let r = 0; r < mc; r++) for (let m = 0; m < mc; m++) if (q.isDark(r, m)) x.fillRect(qx + (m + quiet) * cell, y + (r + quiet) * cell, cell, cell);
+      y += qs;
+      x.fillStyle = '#111'; x.font = font(800, Math.round(mH * 0.72)); x.fillText('MEJA ' + n, cx + cw / 2, y + mH / 2, cw - pad * 2); y += mH;
+      if (o.foot) { x.fillStyle = '#6B7280'; x.font = font(600, Math.round(fH * 0.62)); x.fillText(o.foot, cx + cw / 2, y + fH / 2, cw - pad * 2); }
+    });
+    pages.push(c);
+  }
+  return pages;
+}
+function openQrMeja(cfg, onCount) {
+  const st = { from: 1, count: Math.max(1, Math.min(100, toNum(cfg.jumlah_meja) || 10)), per: Store.get('qrmeja:per', 6), foot: Store.get('qrmeja:foot', 'Scan untuk pesan dari meja'), title: App.settings.nama_toko || '' };
+  const s = sheet({ title: 'Cetak QR Meja', maxWidth: 640,
+    body: '<div class="grid-2"><label class="field"><span class="lbl">Mulai dari meja no.</span><input class="input" id="qmFrom" type="number" inputmode="numeric" min="1" max="999" value="' + st.from + '"></label>' +
+      '<div class="field"><span class="lbl">Jumlah QR dicetak</span><div class="stepper qm-step"><button type="button" data-q="-1" aria-label="Kurangi">' + icon('minus', 'sm') + '</button><input class="input" id="qmCount" type="number" inputmode="numeric" min="1" max="100" value="' + st.count + '"><button type="button" data-q="1" aria-label="Tambah">' + icon('plus', 'sm') + '</button></div></div></div>' +
+      '<div class="chips wrap" style="margin-top:-2px">' + [5, 10, 15, 20, 30].map((n) => '<button class="chip" type="button" data-n="' + n + '">' + n + ' meja</button>').join('') + '</div>' +
+      '<div class="field"><span class="lbl">Ukuran QR per kertas A4</span><div class="seg light js-per">' + [[1, '1 (stand)'], [2, '2 besar'], [4, '4'], [6, '6'], [9, '9 kecil']].map((x) => '<button type="button" data-per="' + x[0] + '" class="' + (st.per === x[0] ? 'on' : '') + '">' + x[1] + '</button>').join('') + '</div></div>' +
+      '<label class="field"><span class="lbl">Teks di bawah nomor meja</span><input class="input" id="qmFoot" maxlength="50" value="' + esc(st.foot) + '"></label>' +
+      '<div class="qm-info js-qminfo"></div>' +
+      '<div class="qm-prev js-qmprev"><div class="spinner" style="margin:40px auto"></div></div>' +
+      (cfg.layanan && cfg.layanan.meja ? '' : '<div class="banner warn" style="margin-top:10px">' + icon('alert', 'sm') + '<div>"Makan di tempat (QR meja)" belum aktif di bagian <b>Cara pesan</b>. Aktifkan & simpan agar QR meja bisa dipakai pelanggan.</div></div>'),
+    foot: '<div class="grid-3" style="gap:8px"><button class="btn outline" id="qmPng" type="button">' + icon('image', 'sm') + 'PNG</button><button class="btn outline" id="qmPdf" type="button">' + icon('download', 'sm') + 'PDF</button><button class="btn primary" id="qmPrint" type="button">' + icon('printer', 'sm') + 'Cetak</button></div>' });
+  const E = (id) => $('#' + id, s.el);
+  let tok = 0, timer = 0;
+  const read = () => {
+    st.from = Math.max(1, Math.min(999, Math.floor(toNum(E('qmFrom').value)) || 1));
+    st.count = Math.max(1, Math.min(100, Math.floor(toNum(E('qmCount').value)) || 1));
+    st.foot = E('qmFoot').value.trim();
+  };
+  const info = () => { const pg = Math.ceil(st.count / st.per); $('.js-qminfo', s.el).innerHTML = icon('table', 'xs') + '<b>Meja ' + st.from + (st.count > 1 ? '–' + (st.from + st.count - 1) : '') + '</b> · ' + st.count + ' QR · ' + pg + ' halaman A4'; };
+  const preview = async () => {
+    read(); info(); const my = ++tok;
+    try {
+      const pages = await qrMejaPages(Object.assign({}, st, { dpi: 72 }));
+      if (my !== tok || !s.el.isConnected) return;
+      $('.js-qmprev', s.el).innerHTML = pages.map((c, i) => '<figure><img src="' + c.toDataURL('image/png') + '" alt="Halaman ' + (i + 1) + '"><figcaption>Halaman ' + (i + 1) + ' dari ' + pages.length + '</figcaption></figure>').join('');
+    } catch (e) { if (my === tok) $('.js-qmprev', s.el).innerHTML = '<div class="muted" style="padding:24px;text-align:center">Gagal membuat pratinjau QR (butuh internet sekali untuk memuat modul QR).</div>'; }
+  };
+  const later = () => { read(); info(); clearTimeout(timer); timer = setTimeout(preview, 280); };
+  s.el.addEventListener('input', later);
+  s.el.addEventListener('click', (e) => {
+    const q = e.target.closest('[data-q]'), n = e.target.closest('[data-n]'), per = e.target.closest('[data-per]');
+    if (q) { E('qmCount').value = Math.max(1, Math.min(100, (toNum(E('qmCount').value) || 0) + Number(q.dataset.q))); later(); }
+    if (n) { E('qmCount').value = n.dataset.n; later(); }
+    if (per) { st.per = Number(per.dataset.per); $$('.js-per button', s.el).forEach((b) => b.classList.toggle('on', b === per)); Store.set('qrmeja:per', st.per); later(); }
+  });
+  const full = async (btn) => { read(); busy(btn, true); try { Store.set('qrmeja:foot', st.foot); if (onCount) onCount(st.from + st.count - 1); return await qrMejaPages(Object.assign({}, st, { dpi: 200 })); } catch (e) { toast('Gagal membuat QR meja: ' + e.message, 'bad'); return null; } finally { busy(btn, false); } };
+  const fname = () => 'QR-Meja-' + st.from + (st.count > 1 ? '-' + (st.from + st.count - 1) : '');
+  E('qmPdf').onclick = async (ev) => {
+    const b = ev.currentTarget, pages = await full(b); if (!pages) return;
+    busy(b, true);
+    try { await loadScript(LIBS.jspdf); const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'p', compress: true }); pages.forEach((c, i) => { if (i) doc.addPage(); doc.addImage(c.toDataURL('image/png'), 'PNG', 0, 0, 210, 297, undefined, 'FAST'); }); Exporter.saveBlob(doc.output('blob'), fname() + '.pdf'); }
+    catch (e) { toast('Gagal membuat PDF: ' + e.message, 'bad'); }
+    busy(b, false);
+  };
+  E('qmPng').onclick = async (ev) => {
+    const pages = await full(ev.currentTarget); if (!pages) return;
+    for (let i = 0; i < pages.length; i++) { const blob = await new Promise((r) => pages[i].toBlob(r, 'image/png')); Exporter.saveBlob(blob, fname() + (pages.length > 1 ? '-hal' + (i + 1) : '') + '.png'); if (i < pages.length - 1) await sleep(500); }
+  };
+  E('qmPrint').onclick = async (ev) => {
+    const w = window.open('', '_blank'); if (w) w.document.write('<p style="font-family:sans-serif;padding:24px">Menyiapkan QR meja…</p>');
+    const pages = await full(ev.currentTarget); if (!pages) { if (w) w.close(); return; }
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + fname() + '</title><style>@page{size:A4;margin:0}html,body{margin:0;padding:0;background:#fff}img{display:block;width:210mm;height:297mm;page-break-after:always;break-after:page}img:last-child{page-break-after:auto;break-after:auto}</style></head><body>' + pages.map((c) => '<img src="' + c.toDataURL('image/png') + '">').join('') + '<script>window.onload=function(){setTimeout(function(){window.focus();window.print()},350)}<\/script></body></html>';
+    if (w) { w.document.open(); w.document.write(html); w.document.close(); return; }
+    // pop-up diblokir → cetak lewat bingkai tersembunyi
+    const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
+    f.contentDocument.open(); f.contentDocument.write(html.replace(/<script>[\s\S]*<\/script>/, '')); f.contentDocument.close();
+    setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { toast('Izinkan pop-up untuk mencetak', 'warn'); } setTimeout(() => f.remove(), 60000); }, 600);
+  };
+  info(); preview();
+  return s;
+}
 page('online', {
   role: 'OWNER', nav: false, foot: true, backTo: 'lainnya',
   st: { open: 'status' },
@@ -242,26 +401,28 @@ page('online', {
     const prodsOf = (cid) => { const o = (c.urutan.prods || {})[cid] || []; return prods.filter((p) => p.kategori_id === cid).sort((a, b) => { const ia = o.indexOf(a.produk_id), ib = o.indexOf(b.produk_id); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); }); };
     const promos = (App.boot.promos || []).filter((p) => p.status_aktif && (p.kanal || 'SEMUA') !== 'KASIR');
     $('.js-body', el).innerHTML =
-      '<div class="card pad on-hero' + (c.aktif ? ' on' : '') + '"><div class="row"><span class="ico-box ' + (c.aktif ? 'ok' : '') + '" style="width:48px;height:48px">' + icon('globe') + '</span><div class="grow"><b style="font-size:16px">Jual Online ' + (c.aktif ? 'AKTIF' : 'nonaktif') + '</b><div class="muted" style="font-size:13px">' + (c.aktif ? 'Pelanggan bisa memesan lewat link & QR. Pesanan masuk ke menu Pesanan Online.' : 'Aktifkan lalu simpan untuk membuka toko online.') + '</div></div><label class="toggle"><input type="checkbox" data-path="aktif"' + (c.aktif ? ' checked' : '') + '></label></div>' +
+      '<div class="card pad on-hero' + (c.aktif ? ' on' : '') + '"><div class="row"><span class="ico-box ' + (c.aktif ? 'ok' : '') + '" style="width:48px;height:48px">' + icon('globe') + '</span><div class="grow"><b style="font-size:16px">Jual Online ' + (c.aktif ? 'AKTIF' : 'nonaktif') + '</b><div class="muted" style="font-size:13px">' + (c.aktif ? 'Pelanggan bisa memesan lewat link & QR. Pesanan masuk ke menu Pesanan Online.' : 'Nyalakan saklar — toko online langsung terbuka untuk pelanggan.') + '</div></div><label class="toggle' + (this.saving ? ' is-busy' : '') + '"><input type="checkbox" data-path="aktif"' + (c.aktif ? ' checked' : '') + (this.saving ? ' disabled' : '') + '></label></div>' +
       '<div class="on-link"><span class="mono ellipsis grow">' + esc(link) + '</span><button class="btn xs outline" data-act="copylink" type="button">' + icon('copy', 'xs') + 'Salin</button></div>' +
       '<div class="grid-3" style="gap:8px;margin-top:10px"><button class="btn outline sm" data-act="qr" type="button">' + icon('qr-code', 'sm') + 'QR Toko</button><button class="btn outline sm" data-act="qrmeja" type="button">' + icon('utensils', 'sm') + 'QR Meja</button><a class="btn outline sm" style="color:var(--ok)" target="_blank" href="https://wa.me/?text=' + encodeURIComponent('Pesan ' + (App.settings.nama_toko || '') + ' online di sini 👉 ' + link) + '">' + icon('whatsapp', 'sm') + 'Bagikan</a></div>' +
       (c.aktif && !App.store ? '<div class="help">' + icon('info', 'xs') + 'Toko sedang tutup — pelanggan hanya bisa melihat menu ' + (c.pesan_saat_tutup ? '(pesanan tetap diterima, diproses saat buka)' : 'sampai toko dibuka') + '.</div>' : '') + '</div>' +
 
       this.sec('tampilan', 'image', 'Banner & pengumuman', (c.banners || []).length + ' banner' + (c.pengumuman ? ' · ada pengumuman' : ''),
         '<label class="field"><span class="lbl">Pengumuman (tampil di atas)</span><input class="input" data-path="pengumuman" maxlength="140" value="' + esc(c.pengumuman || '') + '" placeholder="contoh: Varian baru Matcha Latte sudah tersedia! 🍵"></label>' +
-        '<div class="field"><span class="lbl">Banner (gambar 2:1, maks 8)</span></div><div class="stack" style="gap:10px">' + (c.banners || []).map((b, i) => '<div class="on-banner"><div class="bimg2">' + (b.dataUrl || b.img_url ? '<img src="' + esc(b.dataUrl || b.img_url) + '" alt="">' : '') + '</div><div class="grow stack" style="gap:6px;min-width:0">' +
+        '<div class="field"><span class="lbl">Banner (gambar 2:1, maks 8)' + ((c.banners || []).length > 1 ? ' · tahan ' + icon('grip', 'xs') + ' lalu geser untuk mengatur urutan' : '') + '</span></div><div class="stack js-dnd-bn" style="gap:10px">' + (c.banners || []).map((b, i) => '<div class="on-banner dnd-item" data-id="' + i + '">' + ((c.banners || []).length > 1 ? '<button class="dnd-h" type="button" aria-label="Geser banner (panah atas/bawah)">' + icon('grip', 'sm') + '</button>' : '') + '<div class="bimg2">' + (b.dataUrl || b.img_url ? '<img src="' + esc(b.dataUrl || b.img_url) + '" alt="">' : '') + '</div><div class="grow stack" style="gap:6px;min-width:0">' +
           '<input class="input" data-bn="' + i + '" data-k="judul" value="' + esc(b.judul || '') + '" placeholder="Judul banner (opsional)" maxlength="60" style="min-height:40px">' +
           '<input class="input" data-bn="' + i + '" data-k="sub" value="' + esc(b.sub || '') + '" placeholder="Keterangan (opsional)" maxlength="80" style="min-height:40px">' +
           '<select class="select" data-bn="' + i + '" data-k="produk_id" style="min-height:40px"><option value="">Tidak menautkan produk</option>' + prods.map((p) => '<option value="' + esc(p.produk_id) + '"' + (b.produk_id === p.produk_id ? ' selected' : '') + '>Buka: ' + esc(p.nama) + '</option>').join('') + '</select></div>' +
-          '<div class="stack" style="gap:4px"><button class="icon-btn" data-act="bnup" data-i="' + i + '" type="button"' + (i ? '' : ' disabled') + ' aria-label="Naik">' + icon('chevron-up', 'sm') + '</button><button class="icon-btn" data-act="bndel" data-i="' + i + '" type="button" style="color:var(--bad)" aria-label="Hapus">' + icon('trash', 'sm') + '</button></div></div>').join('') +
-        ((c.banners || []).length < 8 ? '<button class="btn outline block" data-act="bnadd" type="button">' + icon('upload', 'sm') + 'Tambah Banner</button>' : '') + '</div>' +
+          '<div class="stack" style="gap:4px"><button class="icon-btn" data-act="bndel" data-i="' + i + '" type="button" style="color:var(--bad)" aria-label="Hapus">' + icon('trash', 'sm') + '</button></div></div>').join('') +
+        '</div>' + ((c.banners || []).length < 8 ? '<button class="btn outline block" data-act="bnadd" type="button" style="margin-top:10px">' + icon('upload', 'sm') + 'Tambah Banner</button>' : '') +
         '<div class="help">' + icon('info', 'xs') + 'Gambar otomatis dipotong 2:1 & dikompres. Ide: foto promo, menu baru, suasana toko.</div>') +
 
-      this.sec('urutan', 'rows', 'Urutan menu & produk tampil', 'Atur urutan kategori/produk, sembunyikan produk',
-        catOrder.map((cat, ci) => '<div class="on-cat"><div class="row"><b class="grow">' + esc(cat.nama) + '</b><button class="icon-btn" data-act="catup" data-id="' + esc(cat.kategori_id) + '" type="button"' + (ci ? '' : ' disabled') + ' aria-label="Naikkan kategori">' + icon('chevron-up', 'sm') + '</button><button class="icon-btn" data-act="catdn" data-id="' + esc(cat.kategori_id) + '" type="button"' + (ci < catOrder.length - 1 ? '' : ' disabled') + ' aria-label="Turunkan kategori">' + icon('chevron-down', 'sm') + '</button></div>' +
-          prodsOf(cat.kategori_id).map((p, pi, arr) => '<div class="list-item" style="padding:8px 0"><div class="thumb" style="width:36px;height:36px">' + productImg(p) + '</div><div class="grow t ellipsis" style="font-size:14px;' + ((c.hidden || []).indexOf(p.produk_id) > -1 ? 'opacity:.45;text-decoration:line-through' : '') + '">' + esc(p.nama) + '</div>' +
-            '<button class="icon-btn" data-act="pup" data-c="' + esc(cat.kategori_id) + '" data-id="' + esc(p.produk_id) + '" type="button"' + (pi ? '' : ' disabled') + ' aria-label="Naik">' + icon('chevron-up', 'sm') + '</button><button class="icon-btn" data-act="pdn" data-c="' + esc(cat.kategori_id) + '" data-id="' + esc(p.produk_id) + '" type="button"' + (pi < arr.length - 1 ? '' : ' disabled') + ' aria-label="Turun">' + icon('chevron-down', 'sm') + '</button>' +
-            '<label class="toggle" title="Tampil di toko online"><input type="checkbox" data-hide="' + esc(p.produk_id) + '"' + ((c.hidden || []).indexOf(p.produk_id) > -1 ? '' : ' checked') + '></label></div>').join('') + '</div>').join('') +
+      this.sec('urutan', 'rows', 'Urutan menu & produk tampil', 'Tahan & geser untuk mengatur urutan, sembunyikan produk',
+        '<div class="help" style="margin:4px 0 10px">' + icon('grip', 'xs') + 'Tahan ikon titik-titik lalu geser ke atas/bawah. Ketuk nama kategori untuk mengatur produknya.</div>' +
+        '<div class="dnd-list js-dnd-cats">' + catOrder.map((cat) => { const ps = prodsOf(cat.kategori_id), nh = ps.filter((p) => (c.hidden || []).indexOf(p.produk_id) > -1).length, op = this.st.cat === cat.kategori_id;
+          return '<div class="on-cat dnd-item' + (op ? ' open' : '') + '" data-id="' + esc(cat.kategori_id) + '"><div class="on-cat-h"><button class="dnd-h" type="button" aria-label="Geser kategori ' + esc(cat.nama) + ' (panah atas/bawah)">' + icon('grip', 'sm') + '</button>' +
+            '<button class="grow on-cat-t" data-act="catx" data-id="' + esc(cat.kategori_id) + '" type="button"><b>' + esc(cat.nama) + '</b><span class="muted">' + ps.length + ' produk' + (nh ? ' · ' + nh + ' disembunyikan' : '') + '</span>' + icon(op ? 'chevron-up' : 'chevron-down', 'sm') + '</button></div>' +
+            (op ? '<div class="on-prods dnd-list js-dnd-prods" data-c="' + esc(cat.kategori_id) + '">' + (ps.length ? ps.map((p) => { const hid = (c.hidden || []).indexOf(p.produk_id) > -1; return '<div class="on-prod dnd-item" data-id="' + esc(p.produk_id) + '"><button class="dnd-h" type="button" aria-label="Geser ' + esc(p.nama) + ' (panah atas/bawah)">' + icon('grip', 'sm') + '</button><div class="thumb" style="width:36px;height:36px">' + productImg(p) + '</div><div class="grow t ellipsis" style="font-size:14px;' + (hid ? 'opacity:.45;text-decoration:line-through' : '') + '">' + esc(p.nama) + '</div>' +
+              '<label class="toggle" title="Tampil di toko online"><input type="checkbox" data-hide="' + esc(p.produk_id) + '"' + (hid ? '' : ' checked') + '></label></div>'; }).join('') : '<div class="muted" style="padding:10px 0">Belum ada produk di kategori ini.</div>') + '</div>' : '') + '</div>'; }).join('') + '</div>' +
         '<div class="help">' + icon('info', 'xs') + 'Saklar = tampil/sembunyi di toko online saja (kasir tidak terpengaruh).</div>') +
 
       this.sec('best', 'flame', 'Best seller & label baru', (c.best || []).length + ' best seller · ' + Object.keys(c.labels || {}).filter((k) => c.labels[k] && c.labels[k].baru).length + ' label baru',
@@ -286,13 +447,24 @@ page('online', {
         (c.bayar.transfer ? '<div class="field"><span class="lbl">Gambar QRIS</span><div class="row" style="gap:12px"><div class="thumb" style="width:96px;height:96px">' + ((this.qris || (!this.hapusQris && c.qris_url)) ? '<img src="' + esc(this.qris || c.qris_url) + '" alt="QRIS">' : icon('qr-code', 'lg')) + '</div><div class="stack" style="gap:6px"><button class="btn outline sm" data-act="qris" type="button">' + icon('upload', 'sm') + 'Unggah QRIS</button>' + ((this.qris || (!this.hapusQris && c.qris_url)) ? '<button class="btn outline sm" data-act="noqris" type="button" style="color:var(--bad)">' + icon('trash', 'sm') + 'Hapus</button>' : '') + '</div></div></div>' +
           '<label class="field"><span class="lbl">Info rekening (opsional)</span><textarea class="textarea" data-path="rekening" rows="3" maxlength="300" placeholder="BRI 1234-5678-90 a.n. Toko Roti Visena&#10;DANA 0812xxxx">' + esc(c.rekening || '') + '</textarea></label>' : '')) +
       '<div style="height:12px"></div>';
-    this.bind(el);
+    this.bind(el); this.paintSave(el);
+    makeSortable($('.js-dnd-cats', el), { item: '.dnd-item', handle: '.dnd-h',
+      onStart: (it) => { if (this.st.cat) { this.st.cat = ''; $$('.on-prods', el).forEach((x) => x.remove()); $$('.on-cat.open', el).forEach((x) => x.classList.remove('open')); } },
+      onEnd: (ids) => { this.c.urutan.cats = ids; this.touch(el); } });
+    $$('.js-dnd-prods', el).forEach((l) => makeSortable(l, { item: '.dnd-item', handle: '.dnd-h', onEnd: (ids) => { this.c.urutan.prods[l.dataset.c] = ids; this.touch(el); } }));
+    makeSortable($('.js-dnd-bn', el), { item: '.dnd-item', handle: '.dnd-h', onEnd: (ids) => { const old = this.c.banners.slice(); this.c.banners = ids.map((i) => old[Number(i)]); this.touch(el); this.render(el); } });
+  },
+  touch(el) { this.dirty = true; this.paintSave(el); },
+  paintSave(el) {
+    const b = $('[data-act="save"]', el); if (!b || b.classList.contains('is-loading')) return;
+    b.innerHTML = this.dirty ? icon('check', 'sm') + 'Simpan Perubahan <span class="dirty-dot"></span>' : icon('check', 'sm') + 'Tersimpan';
+    b.classList.toggle('outline', !this.dirty); b.classList.toggle('primary', this.dirty);
   },
   bind(el) {
     const body = $('.js-body', el), c = this.c;
     const setPath = (path, v) => { const ks = path.split('.'); let o = c; ks.slice(0, -1).forEach((k) => { o[k] = o[k] || {}; o = o[k]; }); o[ks[ks.length - 1]] = v; this.dirty = true; };
     body.oninput = (e) => {
-      const t = e.target;
+      const t = e.target; setTimeout(() => this.paintSave(el));
       if (t.dataset.path && t.type !== 'checkbox') setPath(t.dataset.path, t.dataset.path === 'jumlah_meja' ? toNum(t.value) : t.value);
       if (t.dataset.money) setPath(t.dataset.money, parseMoney(t.value));
       if (t.dataset.bn !== undefined) { c.banners[t.dataset.bn][t.dataset.k] = t.value; this.dirty = true; }
@@ -302,17 +474,55 @@ page('online', {
       const t = e.target;
       if (t.dataset.bn !== undefined) { c.banners[t.dataset.bn][t.dataset.k] = t.value; this.dirty = true; }
       if (t.type !== 'checkbox') return;
+      if (t.dataset.path === 'aktif') { this.quickToggle(el, t.checked); return; }
       if (t.dataset.path) { setPath(t.dataset.path, t.checked); this.render(el); }
       if (t.dataset.hide) { const h = c.hidden = c.hidden || [], i = h.indexOf(t.dataset.hide); if (t.checked && i > -1) h.splice(i, 1); if (!t.checked && i < 0) h.push(t.dataset.hide); this.dirty = true; this.render(el); }
       if (t.dataset.lbl) { c.labels[t.dataset.lbl] = Object.assign(c.labels[t.dataset.lbl] || {}, { baru: t.checked }); if (t.checked && !c.labels[t.dataset.lbl].teks) c.labels[t.dataset.lbl].teks = 'Baru'; if (!t.checked) delete c.labels[t.dataset.lbl]; this.dirty = true; this.render(el); }
     };
   },
-  move(arr, id, d) { const i = arr.indexOf(id), j = i + d; if (i < 0 || j < 0 || j >= arr.length) return; arr.splice(i, 1); arr.splice(j, 0, id); this.dirty = true; },
-  fullCatOrder() { const cats = (App.boot.categories || []).slice().sort((a, b) => { const o = this.c.urutan.cats || [], ia = o.indexOf(a.kategori_id), ib = o.indexOf(b.kategori_id); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || toNum(a.urutan) - toNum(b.urutan); }); return cats.map((x) => x.kategori_id); },
-  fullProdOrder(cid) { const o = (this.c.urutan.prods || {})[cid] || []; return (App.boot.products || []).filter((p) => p.kategori_id === cid).sort((a, b) => { const ia = o.indexOf(a.produk_id), ib = o.indexOf(b.produk_id); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); }).map((p) => p.produk_id); },
+  /** Saklar Jual Online → langsung tersimpan ke server (toko online seketika buka/tutup). */
+  async quickToggle(el, on) {
+    const c = this.c, prev = c.aktif;
+    c.aktif = on;
+    if (on && !c.layanan.ambil && !c.layanan.antar && !c.layanan.meja) c.layanan.ambil = true;
+    if (on && !c.bayar.ditempat && !c.bayar.transfer) c.bayar.ditempat = true;
+    if (!navigator.onLine) { c.aktif = prev; this.render(el); toast('Butuh internet untuk membuka/menutup toko online.', 'warn'); return; }
+    this.saving = true; this.render(el);
+    const ok = await this.persist(el);
+    this.saving = false;
+    if (!ok) { this.c.aktif = prev; this.render(el); return; }
+    toast(on ? 'Toko online DIBUKA — pelanggan sudah bisa memesan' : 'Toko online DITUTUP — pelanggan tidak bisa memesan', on ? 'ok' : 'warn', 3500);
+  },
+  /** Kirim seluruh pengaturan ke server. */
+  async persist(el, btn) {
+    const c = this.c;
+    if (btn) busy(btn, true);
+    const sent = JSON.stringify(c), payload = JSON.parse(sent), qris = this.qris; delete payload.qris_url; delete payload.qris_file_id;
+    const r = await api('saveOnlineConfig', { config: payload, qrisDataUrl: qris || '', hapusQris: this.hapusQris });
+    if (btn) busy(btn, false);
+    this.saving = false;
+    if (!r.ok) { toast(r.error, 'bad', 5000); if (btn) this.paintSave(el); return false; }
+    App.boot.settings.online_config = JSON.stringify(r.data.config); Boot.persist(); emit('boot');
+    if (JSON.stringify(this.c) === sent && this.qris === qris) { this.c = onlineCfg(); this.qris = null; this.hapusQris = false; this.dirty = false; }
+    else {                                                     // ada perubahan saat menyimpan → pertahankan, ambil URL gambar dari server
+      const srv = onlineCfg(), byId = {}; (srv.banners || []).forEach((b) => { byId[b.id] = b; });
+      this.c.banners = (this.c.banners || []).map((b) => (b.dataUrl && byId[b.id] ? byId[b.id] : b));
+      if (this.qris === qris) { this.c.qris_url = srv.qris_url; this.qris = null; this.hapusQris = false; }
+      this.dirty = true;
+    }
+    this.render(el);
+    Shell.renderNav(); Orders.load(true);
+    return true;
+  },
   actions: {
     sec(a, e, el) { this.st.open = this.st.open === a.dataset.s ? '' : a.dataset.s; this.render(el); },
-    preview() { window.open(shopUrl(), '_blank'); },
+    async preview(a, e, el) {
+      if (!this.dirty) { window.open(shopUrl(), '_blank'); return; }
+      const w = window.open('', '_blank');                    // buka dulu (hindari blokir pop-up), isi setelah tersimpan
+      if (w) w.document.write('<p style="font-family:sans-serif;padding:24px">Menyimpan perubahan…</p>');
+      const ok = await this.actions.save.call(this, $('[data-act="save"]', el), null, el);
+      if (w) { if (ok) w.location.href = shopUrl(); else w.close(); }
+    },
     copylink() { copyText(shopUrl()); },
     async qr(a) {
       busy(a, true);
@@ -320,19 +530,7 @@ page('online', {
       catch (e) { toast('Gagal membuat QR (butuh internet sekali untuk memuat modul QR).', 'bad'); }
       busy(a, false);
     },
-    async qrmeja(a) {
-      const n = Math.max(1, Math.min(60, toNum(this.c.jumlah_meja) || 10));
-      if (!this.c.layanan.meja) toast('Aktifkan "Makan di tempat" di bagian Cara pesan agar QR meja berfungsi.', 'warn', 5000);
-      busy(a, true);
-      try {
-        const imgs = [];
-        for (let i = 1; i <= n; i++) imgs.push((await qrCanvas(shopUrl(String(i)), { size: 600, title: App.settings.nama_toko || '', sub: 'MEJA ' + i, foot: 'Scan untuk pesan dari meja' })).toDataURL('image/png'));
-        const w = window.open('', '_blank'); if (!w) { toast('Izinkan pop-up untuk mencetak', 'warn'); busy(a, false); return; }
-        w.document.write('<html><head><title>QR Meja</title><style>@page{size:A4;margin:10mm}body{margin:0;font-family:Arial}.g{display:grid;grid-template-columns:repeat(2,1fr);gap:8mm}.c{border:1px dashed #bbb;border-radius:4mm;padding:4mm;text-align:center;break-inside:avoid}.c img{width:70mm;height:auto}</style></head><body><div class="g">' + imgs.map((u) => '<div class="c"><img src="' + u + '"></div>').join('') + '</div><script>window.onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>');
-        w.document.close();
-      } catch (e) { toast('Gagal membuat QR meja: ' + e.message, 'bad'); }
-      busy(a, false);
-    },
+    qrmeja(a, e, el) { openQrMeja(this.c, (last) => { if (last > toNum(this.c.jumlah_meja)) { this.c.jumlah_meja = last; this.touch(el); } }); },
     async bnadd(a, e, el) {
       const f = await pickFile(false); if (!f) return;
       busy(a, true);
@@ -340,12 +538,8 @@ page('online', {
       catch (err) { toast(err.message, 'bad'); }
       busy(a, false);
     },
-    bnup(a, e, el) { const b = this.c.banners, i = Number(a.dataset.i); if (i > 0) { [b[i - 1], b[i]] = [b[i], b[i - 1]]; this.dirty = true; this.render(el); } },
     bndel(a, e, el) { this.c.banners.splice(Number(a.dataset.i), 1); this.dirty = true; this.render(el); },
-    catup(a, e, el) { const o = this.fullCatOrder(); this.move(o, a.dataset.id, -1); this.c.urutan.cats = o; this.render(el); },
-    catdn(a, e, el) { const o = this.fullCatOrder(); this.move(o, a.dataset.id, 1); this.c.urutan.cats = o; this.render(el); },
-    pup(a, e, el) { const o = this.fullProdOrder(a.dataset.c); this.move(o, a.dataset.id, -1); this.c.urutan.prods[a.dataset.c] = o; this.render(el); },
-    pdn(a, e, el) { const o = this.fullProdOrder(a.dataset.c); this.move(o, a.dataset.id, 1); this.c.urutan.prods[a.dataset.c] = o; this.render(el); },
+    catx(a, e, el) { this.st.cat = this.st.cat === a.dataset.id ? '' : a.dataset.id; this.render(el); },
     bestdel(a, e, el) { this.c.best.splice(Number(a.dataset.i), 1); this.dirty = true; this.render(el); },
     bestadd(a, e, el) {
       const sel = new Set(this.c.best || []);
@@ -368,18 +562,12 @@ page('online', {
     noqris(a, e, el) { this.qris = null; this.hapusQris = true; this.dirty = true; this.render(el); },
     async save(a, e, el) {
       const c = this.c;
-      if (c.aktif && !c.layanan.ambil && !c.layanan.antar && !c.layanan.meja) { toast('Pilih minimal satu cara pesan (Ambil / Antar / Meja).', 'bad'); this.st.open = 'layanan'; this.render(el); return; }
-      if (c.aktif && !c.bayar.ditempat && !c.bayar.transfer) { toast('Pilih minimal satu cara pembayaran.', 'bad'); this.st.open = 'bayar'; this.render(el); return; }
-      if (!navigator.onLine) { toast('Menyimpan butuh internet.', 'warn'); return; }
-      busy(a, true);
-      const payload = JSON.parse(JSON.stringify(c)); delete payload.qris_url; delete payload.qris_file_id;
-      const r = await api('saveOnlineConfig', { config: payload, qrisDataUrl: this.qris || '', hapusQris: this.hapusQris });
-      busy(a, false);
-      if (!r.ok) { toast(r.error, 'bad', 5000); return; }
-      App.boot.settings.online_config = JSON.stringify(r.data.config); Boot.persist(); emit('boot');
-      this.c = onlineCfg(); this.qris = null; this.hapusQris = false; this.dirty = false; this.render(el);
-      Shell.renderNav(); Orders.load(true);
-      toast(c.aktif ? 'Toko online aktif & tersimpan' : 'Pengaturan tersimpan (toko online nonaktif)', 'ok', 3000);
+      if (c.aktif && !c.layanan.ambil && !c.layanan.antar && !c.layanan.meja) { toast('Pilih minimal satu cara pesan (Ambil / Antar / Meja).', 'bad'); this.st.open = 'layanan'; this.render(el); return false; }
+      if (c.aktif && !c.bayar.ditempat && !c.bayar.transfer) { toast('Pilih minimal satu cara pembayaran.', 'bad'); this.st.open = 'bayar'; this.render(el); return false; }
+      if (!navigator.onLine) { toast('Menyimpan butuh internet.', 'warn'); return false; }
+      const ok = await this.persist(el, a);
+      if (ok) toast(c.aktif ? 'Tersimpan — toko online langsung diperbarui' : 'Pengaturan tersimpan (toko online nonaktif)', 'ok', 3000);
+      return ok;
     }
   }
 });
