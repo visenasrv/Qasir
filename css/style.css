@@ -494,3 +494,49 @@ button.pill { cursor: pointer; }
 .explain ol { margin: 8px 0 0; padding-left: 20px; } .explain li + li { margin-top: 4px; }
 .formula { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; background: #fff; border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 10px; font-weight: 600; }
 .formula .eq { color: var(--muted); } .formula .res { color: var(--p-dark); font-weight: 800; }
+.torch-btn { position: absolute; top: 10px; right: 10px; width: 42px; height: 42px; border-radius: 50%; background: rgba(0,0,0,.45); color: #fff; display: grid; place-items: center; z-index: 2; }
+.torch-btn.on { background: #FACC15; color: #111; }
+/* v1.2: penjelasan bisa dilipat */
+details.explain { padding: 0; }
+details.explain > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; color: #1E3A8A; user-select: none; }
+details.explain > summary::-webkit-details-marker { display: none; }
+details.explain > summary > span:first-child { display: flex; align-items: center; gap: 8px; }
+details.explain > summary .sum-hint::after { content: 'Tampilkan ▾'; font-size: 12.5px; font-weight: 700; color: var(--info); white-space: nowrap; }
+details.explain[open] > summary .sum-hint::after { content: 'Sembunyikan ▴'; }
+details.explain .explain-body { padding: 0 16px 14px; }
+
+/* ---------- v1.2: tampilan kasir ringkas (tanpa gambar, default) ---------- */
+.view-btn { min-height: 48px; min-width: 48px; padding: 0 12px; border-radius: var(--r-btn); border: 1px solid var(--line); background: #fff; color: var(--text); font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; flex: none; }
+.pgrid.compact { gap: 10px; }
+.pgrid.compact .pcard { padding: 12px 12px 8px; border-top: 4px solid var(--cat, var(--p)); min-height: 112px; }
+.pgrid.compact .pcard.in-cart { border-top-width: 4px; border-top-color: var(--cat, var(--p)); background: #FFFBF7; }
+.pgrid.compact .pcard .nm { margin-top: 0; font-size: 14.5px; font-weight: 700; padding-right: 4px; }
+.pgrid.compact .pcard .pr { color: var(--p-dark); font-size: 15.5px; margin-top: 4px; }
+.pgrid.compact .pcard .ft { margin-top: auto; padding-top: 6px; min-height: 38px; }
+.pgrid.compact .pcard.habis .nm, .pgrid.compact .pcard.habis .pr { color: var(--faint); }
+.pgrid.compact .vtag { font-size: 10.5px; font-weight: 800; letter-spacing: .04em; color: var(--p-dark); background: var(--p-soft); padding: 2px 7px; border-radius: 999px; }
+@media (min-width: 1024px) { .pgrid.compact { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
+
+/* ---------- v1.3: Jual Online (admin) ---------- */
+.bnav.six a { font-size: 10.5px; }
+.bnav.six a .ic { width: 22px; height: 22px; }
+.bnav a .js-order-count { position: absolute; top: 6px; left: calc(50% + 6px); min-width: 18px; height: 18px; font-size: 10.5px; background: var(--bad); }
+.side a .js-order-count { margin-left: auto; background: var(--bad); }
+.on-hero { border: 1.5px solid var(--line); }
+.on-hero.on { border-color: #86EFAC; background: #F7FEF9; }
+.on-link { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); font-size: 12.5px; min-width: 0; }
+.on-sec { margin-top: 12px; overflow: hidden; }
+.on-h { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+.on-h b { display: block; font-size: 15px; } .on-h .muted { display: block; font-size: 12.5px; }
+.on-sec.open .on-h { border-bottom: 1px solid var(--line-2); }
+.on-b { padding: 4px 16px 16px; }
+.on-row { padding: 12px 0; border-bottom: 1px solid var(--line-2); gap: 12px; }
+.on-banner { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border: 1px solid var(--line); border-radius: 14px; }
+.bimg2 { width: 120px; aspect-ratio: 2 / 1; border-radius: 10px; overflow: hidden; background: var(--p-soft); flex: none; }
+.bimg2 img { width: 100%; height: 100%; object-fit: cover; }
+@media (max-width: 480px) { .on-banner { flex-wrap: wrap; } .bimg2 { width: 100%; } }
+.on-cat { padding: 12px 0 4px; border-bottom: 1px solid var(--line-2); }
+.po-card.is-new { border: 1.5px solid #FCD34D; box-shadow: 0 0 0 4px #FEF3C7; }
+.po-tipe { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--p-soft); color: var(--p-dark); }
+.po-tipe b { color: var(--text); }
+.po-items { margin-top: 10px; }

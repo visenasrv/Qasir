@@ -2,23 +2,40 @@
 'use strict';
 const Code128 = {
   P: ['212222','222122','222221','121223','121322','131222','122213','122312','132212','221213','221312','231212','112232','122132','122231','113222','123122','123221','223211','221132','221231','213212','223112','312131','311222','321122','321221','312212','322112','322211','212123','212321','232121','111323','131123','131321','112313','132113','132311','211313','231113','231311','112133','112331','132131','113123','113321','133121','313121','211331','231131','213113','213311','213131','311123','311321','331121','312113','312311','332111','314111','221411','431111','111224','111422','121124','121421','141122','141221','112214','112412','122114','122411','142112','142211','241211','221114','413111','241112','134111','111242','121142','121241','114212','124112','124211','411212','421112','421211','212141','214121','412121','111143','111341','131141','114113','114311','411113','411311','113141','114131','311141','411131','211412','211214','211232','2331112'],
-  /** Kode → daftar nilai simbol (pakai set C untuk angka genap ≥4 digit, selain itu set B). */
+  /** Kode → daftar nilai simbol. Encoder optimal B/C: deretan angka dipadatkan dengan set C
+   *  sehingga barcode lebih pendek → garis lebih lebar → jauh lebih mudah discan setelah dicetak. */
   values(text) {
     text = String(text || '');
-    let codes;
-    if (/^\d+$/.test(text) && text.length >= 4 && text.length % 2 === 0) {
-      codes = [105]; for (let i = 0; i < text.length; i += 2) codes.push(Number(text.substr(i, 2)));
-    } else {
-      codes = [104];
-      for (const ch of text) { const c = ch.charCodeAt(0); codes.push(c >= 32 && c <= 127 ? c - 32 : 31); }
+    const isD = (i) => i < text.length && text.charCodeAt(i) >= 48 && text.charCodeAt(i) <= 57;
+    const runAt = (i) => { let n = 0; while (isD(i + n)) n++; return n; };
+    const codes = [];
+    let i = 0, set = '';
+    const first = runAt(0);
+    if (first >= 4 || (first === text.length && first >= 2 && first % 2 === 0)) { set = 'C'; codes.push(105); }
+    else { set = 'B'; codes.push(104); }
+    while (i < text.length) {
+      if (set === 'C') {
+        if (runAt(i) >= 2) { codes.push(Number(text.substr(i, 2))); i += 2; continue; }
+        codes.push(100); set = 'B'; continue;                       // pindah ke set B
+      }
+      const n = runAt(i);
+      const atEnd = i + n === text.length;
+      if (n >= (atEnd ? 4 : 6)) {
+        if (n % 2) { codes.push(text.charCodeAt(i) - 32); i++; }     // satu digit ganjil di set B dulu
+        codes.push(99); set = 'C'; continue;                         // pindah ke set C
+      }
+      const c = text.charCodeAt(i); codes.push(c >= 32 && c <= 127 ? c - 32 : 31); i++;
     }
     let sum = codes[0];
-    for (let i = 1; i < codes.length; i++) sum += codes[i] * i;
+    for (let k = 1; k < codes.length; k++) sum += codes[k] * k;
     codes.push(sum % 103); codes.push(106);
     return codes;
   },
+  /** Jumlah modul (garis tersempit) termasuk start, cek & stop — tanpa quiet zone. */
+  modules(text) { return (this.values(text).length - 1) * 11 + 13; },
   svg(text, o) {
     o = Object.assign({ height: 60, quiet: 10, showText: false }, o || {});
+    if (o.moduleMm) return this.svgPrint(text, o);
     const widths = this.values(text).map((v) => this.P[v]).join('');
     let x = o.quiet, rects = '';
     for (let i = 0; i < widths.length; i++) {
@@ -32,6 +49,24 @@ const Code128 = {
   }
 };
 
+/** SVG untuk dicetak: ukuran fisik pasti (mm), lebar garis = kelipatan titik printer, quiet zone ≥10 modul. */
+Code128.svgPrint = function (text, o) {
+  const widths = this.values(text).map((v) => this.P[v]).join('');
+  const q = Math.max(10, o.quiet || 10), X = o.moduleMm, H = o.heightMm || 12;
+  let x = q, rects = '';
+  for (let i = 0; i < widths.length; i++) { const w = Number(widths[i]); if (i % 2 === 0) rects += '<rect x="' + x + '" y="0" width="' + w + '" height="1"/>'; x += w; }
+  const total = x + q;
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + total + ' 1" preserveAspectRatio="none" shape-rendering="crispEdges" style="width:' + (total * X).toFixed(3) + 'mm;height:' + H + 'mm;display:block;flex:none"><rect width="' + total + '" height="1" fill="#fff"/><g fill="#000">' + rects + '</g></svg>';
+};
+/** Pilih lebar modul terbesar yang muat, kelipatan titik printer (300 dpi untuk kertas A4, 203 dpi untuk thermal). */
+Code128.pickModule = function (texts, availMm, thermal) {
+  const maxMod = Math.max.apply(null, texts.map((t) => this.modules(t) + 20));
+  const dots = thermal ? [4, 3, 2] : [6, 5, 4, 3];
+  const dpi = thermal ? 203 : 300;
+  for (const d of dots) { const X = d * 25.4 / dpi; if (maxMod * X <= availMm) return X; }
+  return Math.max(0.19, availMm / maxMod);
+};
+
 const Scanner = {
   stream: null, timer: null, h5: null, ac: null,
   /** Siapkan audio saat kasir menekan tombol Scan (browser hanya mengizinkan suara setelah sentuhan). */
@@ -42,19 +77,23 @@ const Scanner = {
       const b = this.ac.createBuffer(1, 1, 22050), src = this.ac.createBufferSource(); src.buffer = b; src.connect(this.ac.destination); src.start(0);
     } catch (e) {}
   },
-  /** Bunyi "bip" kasir: sukses = dua nada naik, gagal = dua nada turun. */
+  /** Bunyi kasir: SATU kali "beep" pendek bernada tinggi seperti scanner di minimarket.
+   *  Gagal: satu dengung rendah yang lebih panjang (jelas berbeda dari sukses). */
   tone(ok) {
     try {
       this.unlockAudio(); const ac = this.ac; if (!ac) return;
-      const notes = ok ? [[1320, 0, 0.07], [1760, 0.08, 0.11]] : [[330, 0, 0.13], [220, 0.15, 0.2]];
-      notes.forEach((n) => {
-        const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + n[1];
-        o.type = ok ? 'square' : 'sawtooth'; o.frequency.value = n[0];
-        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(ok ? 0.18 : 0.14, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + n[2]);
-        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + n[2] + 0.02);
-      });
+      const t = ac.currentTime + 0.005, dur = ok ? 0.13 : 0.34;
+      const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
+      o.type = 'square'; o.frequency.value = ok ? 2730 : 290;
+      f.type = 'lowpass'; f.frequency.value = ok ? 5200 : 1400; f.Q.value = 0.7;   // halus, tidak cempreng
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(ok ? 0.22 : 0.2, t + 0.004);              // serangan cepat → "tik" yang tegas
+      g.gain.setValueAtTime(ok ? 0.22 : 0.2, t + dur - 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(f); f.connect(g); g.connect(ac.destination);
+      o.start(t); o.stop(t + dur + 0.02);
     } catch (e) {}
-    try { navigator.vibrate && navigator.vibrate(ok ? 70 : [90, 60, 90]); } catch (e) {}
+    try { navigator.vibrate && navigator.vibrate(ok ? 60 : 250); } catch (e) {}
   },
   beep() { this.tone(true); },
   /** Animasi + suara + teks hasil scan. */
@@ -107,27 +146,49 @@ const Scanner = {
   },
   async start(box, done) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('browser tidak mendukung kamera');
+    // Resolusi tinggi + fokus otomatis terus-menerus → barcode kecil hasil cetak tetap terbaca
+    const vc = { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] };
     if ('BarcodeDetector' in window) {
       const formats = await window.BarcodeDetector.getSupportedFormats().catch(() => []);
       const want = ['code_128', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_39', 'qr_code'].filter((f) => !formats.length || formats.indexOf(f) > -1);
       const det = new window.BarcodeDetector({ formats: want });
       const video = box.querySelector('video');
-      this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false });
+      this.stream = await navigator.mediaDevices.getUserMedia({ video: vc, audio: false }).catch(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }));
       video.srcObject = this.stream; await video.play();
+      this.torchSetup(box, this.stream.getVideoTracks()[0]);
       let busyDetect = false;
       this.timer = setInterval(async () => {
         if (busyDetect || video.readyState < 2) return;
         busyDetect = true;
         try { const r = await det.detect(video); if (r && r[0] && r[0].rawValue) done(r[0].rawValue); } catch (e) {}
         busyDetect = false;
-      }, 220);
+      }, 140);
       return;
     }
-    // Cadangan untuk browser tanpa BarcodeDetector (mis. iPhone): pustaka html5-qrcode
+    // Cadangan untuk browser tanpa BarcodeDetector (iPhone, Chrome Windows): pustaka html5-qrcode
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js');
     box.innerHTML = '<div id="h5scan" style="width:100%;height:100%"></div><div class="frame" style="display:none"></div><div class="hit-ico"></div>';
-    this.h5 = new window.Html5Qrcode('h5scan');
-    await this.h5.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 260, height: 130 } }, (txt) => done(txt), () => {});
+    const F = window.Html5QrcodeSupportedFormats || {};
+    const fmts = ['CODE_128', 'EAN_13', 'EAN_8', 'UPC_A', 'UPC_E', 'CODE_39', 'QR_CODE'].map((k) => F[k]).filter((v) => v !== undefined);
+    this.h5 = new window.Html5Qrcode('h5scan', { formatsToSupport: fmts.length ? fmts : undefined, experimentalFeatures: { useBarCodeDetectorIfSupported: true }, verbose: false });
+    await this.h5.start({ facingMode: 'environment' }, {
+      fps: 15, disableFlip: true,
+      qrbox: (w, h) => ({ width: Math.max(200, Math.floor(w * 0.88)), height: Math.max(90, Math.floor(h * 0.42)) }),
+      videoConstraints: vc
+    }, (txt) => done(txt), () => {});
+    try { const h5 = this.h5; this.torchSetup(box, { getCapabilities: () => h5.getRunningTrackCapabilities(), applyConstraints: (c) => h5.applyVideoConstraints(c) }); } catch (e) {}
+  },
+  /** Tombol senter (jika kamera mendukung) — membantu scan di tempat redup. */
+  torchSetup(box, track) {
+    try {
+      const cap = track && track.getCapabilities ? track.getCapabilities() : {};
+      if (!cap.torch) return;
+      let on = false;
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'torch-btn'; b.setAttribute('aria-label', 'Senter'); b.innerHTML = icon('zap', 'sm');
+      b.onclick = async () => { on = !on; try { await track.applyConstraints({ advanced: [{ torch: on }] }); b.classList.toggle('on', on); } catch (e) {} };
+      box.appendChild(b);
+    } catch (e) {}
   },
   stop() {
     clearInterval(this.timer); this.timer = null;

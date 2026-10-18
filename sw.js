@@ -1,11 +1,11 @@
 /* QASIR — Service Worker: app shell cache-first → aplikasi terbuka instan & tetap jalan offline.
    Naikkan VERSION setiap kali Anda mengubah file frontend agar perangkat mengambil versi baru. */
-const VERSION = 'qasir-v1.1.0';
+const VERSION = 'qasir-v1.3.0';
 const SHELL = [
-  './', 'index.html', 'manifest.webmanifest', 'css/style.css?v=1.1.0',
-  'js/config.js?v=1.1.0', 'js/icons.js?v=1.1.0', 'js/core.js?v=1.1.0', 'js/export.js?v=1.1.0', 'js/hpp.js?v=1.1.0', 'js/barcode.js?v=1.1.0',
-  'js/printer.js?v=1.1.0', 'js/p-kasir.js?v=1.1.0', 'js/p-ops.js?v=1.1.0', 'js/p-owner.js?v=1.1.0', 'js/p-promo.js?v=1.1.0', 'js/app.js?v=1.1.0',
-  'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'
+  './', 'index.html', 'manifest.webmanifest', 'css/style.css?v=1.3.0',
+  'js/config.js?v=1.3.0', 'js/icons.js?v=1.3.0', 'js/core.js?v=1.3.0', 'js/export.js?v=1.3.0', 'js/hpp.js?v=1.3.0', 'js/barcode.js?v=1.3.0',
+  'js/printer.js?v=1.3.0', 'js/p-kasir.js?v=1.3.0', 'js/p-ops.js?v=1.3.0', 'js/p-owner.js?v=1.3.0', 'js/p-promo.js?v=1.3.0', 'js/p-online.js?v=1.3.0', 'js/app.js?v=1.3.0',
+  'toko.html', 'css/toko.css?v=1.3.0', 'js/toko.js?v=1.3.0', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
 const RUNTIME = VERSION + '-rt';
 
@@ -22,7 +22,12 @@ self.addEventListener('fetch', (e) => {
   if (/script\.google(usercontent)?\.com$/.test(url.hostname)) return; // API selalu langsung ke server
   // Navigasi halaman → index.html dari cache (SPA)
   if (req.mode === 'navigate') {
-    e.respondWith(caches.match('index.html').then((r) => r || fetch(req)).catch(() => caches.match('index.html')));
+    // toko.html (toko online pelanggan) & index.html (aplikasi kasir) disajikan masing-masing
+    const page = /\/toko\.html$/.test(url.pathname) ? 'toko.html' : 'index.html';
+    e.respondWith(caches.open(VERSION).then((c) => c.match(page).then((hit) => {
+      const net = fetch(req).then((res) => { if (res.ok) c.put(page, res.clone()); return res; }).catch(() => hit);
+      return hit || net;                                        // instan dari cache, diperbarui di latar
+    })));
     return;
   }
   // File aplikasi (domain sendiri) → cache-first

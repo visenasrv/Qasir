@@ -23,7 +23,7 @@ page('menu', {
   role: 'OWNER', backTo: 'lainnya',
   st: { mode: 'img', cols: 2, title: 'MENU KAMI', showVar: true, showFoot: true },
   template() {
-    return topbar({ back: true, title: 'Daftar Menu', sub: 'Untuk cetak, WhatsApp & media sosial' }) +
+    return topbar({ back: true, title: 'Daftar Menu', sub: 'Untuk cetak, WhatsApp & media sosial', right: '<a class="btn sm outline-brand" href="#/menu-ai">' + icon('sparkles', 'sm') + '<span>Prompt AI</span></a>' }) +
       '<div class="wrap" style="padding-top:14px;max-width:1100px"><div class="desk-2" style="grid-template-columns:minmax(0,360px) minmax(0,1fr)"><div class="stack js-opts"></div><div><div class="js-preview"></div><div class="grid-3" style="margin-top:12px"><button class="btn primary" data-act="png" type="button">' + icon('image', 'sm') + 'Gambar</button><button class="btn outline" data-act="pdf" type="button">' + icon('printer', 'sm') + 'PDF</button><button class="btn outline" data-act="wa" type="button" style="color:var(--ok)">' + icon('whatsapp', 'sm') + 'Teks WA</button></div>' +
       '<div class="help">' + icon('info', 'xs') + 'Gambar & PDF langsung tersimpan ke folder Unduhan, sama persis dengan pratinjau. Hanya produk yang dicentang "Tampilkan di Daftar Menu".</div></div></div></div>';
   },
@@ -205,7 +205,8 @@ page('label', {
       '<div class="wrap" style="padding-top:14px;max-width:1100px"><div class="desk-2"><div class="stack"><div class="card pad"><span class="sec-title"><span class="bullet"></span>Format kertas</span><div class="chips wrap js-fmt" style="margin-top:10px"></div>' +
       '<div class="row between" style="margin-top:14px"><span style="font-weight:600;font-size:14px">Nama produk</span><label class="toggle"><input type="checkbox" data-k="showName" checked></label></div><div class="row between" style="margin-top:10px"><span style="font-weight:600;font-size:14px">Harga</span><label class="toggle"><input type="checkbox" data-k="showPrice" checked></label></div></div>' +
       '<div class="card pad"><div class="row between"><span class="sec-title"><span class="bullet"></span>Produk & jumlah</span><span class="pill brand sm js-total"></span></div><div class="input-wrap" style="margin-top:10px">' + icon('search', 'sm') + '<input class="input js-q" type="search" placeholder="Cari produk"></div><div class="js-list" style="margin-top:6px"></div></div></div>' +
-      '<div><div class="row between" style="margin-bottom:8px"><span class="sec-title">Pratinjau</span><span class="muted js-pages" style="font-size:12.5px"></span></div><div class="js-prev" style="background:#E5E7EB;border-radius:14px;padding:12px"></div></div></div></div>';
+      '<div><div class="row between" style="margin-bottom:8px"><span class="sec-title">Pratinjau</span><span class="muted js-pages" style="font-size:12.5px"></span></div><div class="js-prev" style="background:#E5E7EB;border-radius:14px;padding:12px"></div>' +
+      '<div class="help">' + icon('info', 'xs') + '<span>Saat mencetak pilih Skala <b>100% / Ukuran sebenarnya</b> (jangan "Sesuaikan halaman") dan kualitas cetak <b>Normal/Tinggi</b> — garis barcode sudah diatur pas dengan titik printer agar mudah discan.</span></div></div></div></div>';
   },
   init(el) {
     $('.js-q', el).addEventListener('input', debounce((e) => { this.st.q = e.target.value.trim().toLowerCase(); this.renderList(el); }, 100));
@@ -243,19 +244,154 @@ page('label', {
     fmt(a, e, el) { this.st.fmt = a.dataset.k; this.renderFmt(el); this.renderPrev(el); },
     print() {
       const L = this.labels(); if (!L.length) { toast('Pilih produk & jumlah label dulu', 'warn'); return; }
-      const f = LABEL_FORMATS[this.st.fmt];
+      const f = LABEL_FORMATS[this.st.fmt], thermal = f.cols === 1;
       const w = window.open('', '_blank'); if (!w) { toast('Izinkan pop-up untuk mencetak', 'warn'); return; }
-      const cell = (p) => '<div class="c">' + (this.st.showName ? '<div class="n">' + esc(p.nama) + '</div>' : '') + Code128.svg(String(p.kode_barcode), { height: 40, quiet: 6 }) + '<div class="k">' + esc(p.kode_barcode) + '</div>' + (this.st.showPrice ? '<div class="p">' + rp(p.harga_jual) + '</div>' : '') + '</div>';
+      // Ukuran garis dipatok ke titik printer + quiet zone 10 modul → hasil cetak tajam & mudah discan
+      const X = Code128.pickModule(L.map((p) => String(p.kode_barcode)), f.w - 3, thermal);
+      const barH = Math.max(8, Math.round(f.h * (this.st.showName && this.st.showPrice ? 0.42 : 0.55)));
+      const cell = (p) => '<div class="c">' + (this.st.showName ? '<div class="n">' + esc(p.nama) + '</div>' : '') + Code128.svg(String(p.kode_barcode), { moduleMm: X, heightMm: barH, quiet: 10 }) + '<div class="k">' + esc(p.kode_barcode) + '</div>' + (this.st.showPrice ? '<div class="p">' + rp(p.harga_jual) + '</div>' : '') + '</div>';
       const css = '@page{size:' + f.page + ';margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;-webkit-print-color-adjust:exact}' +
         '.sheet{display:grid;grid-template-columns:repeat(' + f.cols + ',' + f.w + 'mm);grid-auto-rows:' + f.h + 'mm;column-gap:' + f.gx + 'mm;row-gap:' + f.gy + 'mm;padding:' + f.mt + 'mm 0 0 ' + f.ml + 'mm}' +
         (f.cols > 1 ? '.sheet{page-break-after:always;height:297mm}' : '') +
-        '.c{width:' + f.w + 'mm;height:' + f.h + 'mm;padding:1.5mm 2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;text-align:center' + (f.cols === 1 ? ';page-break-after:always' : '') + '}' +
-        '.c svg{width:100%;height:' + (f.h * 0.42) + 'mm}.n{font-size:8pt;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.k{font-family:monospace;font-size:7pt;letter-spacing:.5px}.p{font-size:8pt;font-weight:bold}';
+        '.c{width:' + f.w + 'mm;height:' + f.h + 'mm;padding:1mm 1.5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;text-align:center' + (f.cols === 1 ? ';page-break-after:always' : '') + '}' +
+        '.c svg{margin:.6mm 0}.n{font-size:8pt;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.15}.k{font-family:monospace;font-size:7.5pt;letter-spacing:.6px;line-height:1.1}.p{font-size:8pt;font-weight:bold;line-height:1.15}' +
+        '.tip{position:fixed;top:4mm;left:0;right:0;text-align:center;font:9pt Arial;color:#555}@media print{.tip{display:none}}';
       let body = '';
       if (f.cols > 1) for (let i = 0; i < L.length; i += 24) body += '<div class="sheet">' + L.slice(i, i + 24).map(cell).join('') + '</div>';
       else body = '<div class="sheet">' + L.map(cell).join('') + '</div>';
-      w.document.write('<html><head><title>Label Barcode</title><style>' + css + '</style></head><body>' + body + '<script>window.onload=function(){setTimeout(function(){print()},300)}<\/script></body></html>');
+      w.document.write('<html><head><title>Label Barcode</title><style>' + css + '</style></head><body><div class="tip">Saat mencetak: Skala <b>100% / Ukuran sebenarnya</b> (jangan "Sesuaikan halaman"), Margin: <b>Tidak ada</b>.</div>' + body + '<script>window.onload=function(){setTimeout(function(){print()},300)}<\/script></body></html>');
       w.document.close();
     }
+  }
+});
+
+
+/* ======================================================= PROMPT MENU AI */
+const MENU_STYLES = {
+  kafe: { nama: 'Kafe hangat', id: 'nuansa kafe hangat & rustic: latar kertas kraft/kayu, ornamen tangan sederhana, judul kategori bergaya hand-lettering, warna hangat', en: 'warm rustic café look: kraft paper or wood background, simple hand-drawn ornaments, hand-lettered category headings, warm tones' },
+  kapur: { nama: 'Papan kapur', id: 'gaya papan kapur (chalkboard) hitam dengan tulisan kapur putih & aksen kapur berwarna, ilustrasi doodle kecil', en: 'black chalkboard style with white chalk lettering and colored chalk accents, small doodle illustrations' },
+  modern: { nama: 'Modern minimalis', id: 'modern minimalis: latar terang polos, grid rapi, banyak ruang kosong, huruf sans-serif bersih', en: 'modern minimalist: clean light background, tidy grid, generous whitespace, clean sans-serif type' },
+  ceria: { nama: 'Ceria & colorful', id: 'ceria & penuh warna: bentuk membulat, stiker, latar warna cerah, cocok untuk jajanan & donat', en: 'cheerful & colorful: rounded shapes, sticker accents, bright backgrounds, great for snacks & donuts' },
+  premium: { nama: 'Premium elegan', id: 'premium elegan: latar gelap, aksen emas tipis, huruf serif, kesan mewah', en: 'premium elegant: dark background, thin gold accents, serif typography, luxurious feel' }
+};
+const MENU_LAYOUTS = {
+  grid: { nama: 'Grid foto', id: 'grid kartu: setiap item tampil dengan fotonya, nama di bawah foto, harga menonjol', en: 'card grid: every item shown with its photo, name below the photo, prominent price' },
+  list: { nama: 'Daftar + foto unggulan', id: 'daftar teks rapi per kategori (nama ....... harga) dengan beberapa foto produk unggulan sebagai hiasan besar di sisi/atas', en: 'neat text list per category (name ....... price) with a few large hero product photos placed at the side/top' }
+};
+page('menu-ai', {
+  role: 'OWNER', backTo: 'menu',
+  st: { sel: null, style: 'kafe', layout: 'grid', size: 'A4', title: 'MENU KAMI', showVar: true, showFoot: true, noPhoto: 'teks', lang: 'id', out: null },
+  template() {
+    return topbar({ back: true, title: 'Prompt Menu AI', sub: 'Desain daftar menu dengan foto produk Anda', right: '<button class="icon-btn ghost-border" data-act="history" type="button" aria-label="Riwayat">' + icon('history', 'sm') + '</button>' }) +
+      '<div class="wrap js-body" style="padding-top:14px;max-width:1000px"></div>';
+  },
+  init(el) {
+    el.addEventListener('input', (e) => { const k = e.target.dataset.mk; if (k) { this.st[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; this.paintOut(el); } });
+    el.addEventListener('change', (e) => {
+      const k = e.target.dataset.mk; if (k && e.target.type === 'checkbox') { this.st[k] = e.target.checked; this.paintOut(el); }
+      const pid = e.target.dataset.pick; if (pid) { if (e.target.checked) this.st.sel.add(pid); else this.st.sel.delete(pid); this.renderPhotos(el); this.paintOut(el); this.paintCount(el); }
+    });
+  },
+  show(el) {
+    if (!this.st.sel) this.st.sel = new Set((App.boot.products || []).filter((p) => p.tampil_di_menu !== false && p.status_aktif !== false).map((p) => p.produk_id));
+    this.render(el);
+  },
+  groups() { return menuProducts().map((g) => ({ cat: g.cat, items: g.items.filter((p) => this.st.sel.has(p.produk_id)) })).filter((g) => g.items.length); },
+  photos() { const out = []; this.groups().forEach((g) => g.items.forEach((p) => { const u = p._fotoLocal || p.foto_url; if (u) out.push({ p, u }); })); return out; },
+  render(el) {
+    const s = this.st, all = menuProducts();
+    const chip = (key, obj) => Object.keys(obj).map((k) => '<button class="chip' + (s[key] === k ? ' on' : '') + '" data-act="opt" data-key="' + key + '" data-v="' + k + '" type="button">' + obj[k].nama + '</button>').join('');
+    $('.js-body', el).innerHTML = '<div class="desk-2"><div class="stack">' +
+      '<div class="card pad"><div class="step-h"><span class="n">1</span><span class="t">Pilih produk</span><span class="grow"></span><span class="pill brand sm js-count"></span></div>' +
+      '<div class="row wrapx" style="gap:8px;margin-bottom:6px"><button class="btn xs outline" data-act="selall" type="button">Semua</button><button class="btn xs outline" data-act="selphoto" type="button">' + icon('image', 'xs') + 'Yang ada foto</button><button class="btn xs outline" data-act="selnone" type="button">Kosongkan</button></div>' +
+      all.map((g) => '<div class="sec-title" style="margin:12px 0 4px">' + esc(g.cat.nama) + '</div>' + g.items.map((p) => { const u = p._fotoLocal || p.foto_url; return '<label class="list-item" style="cursor:pointer"><input type="checkbox" data-pick="' + esc(p.produk_id) + '"' + (s.sel.has(p.produk_id) ? ' checked' : '') + ' style="width:20px;height:20px;accent-color:var(--p)"><div class="thumb" style="width:40px;height:40px">' + productImg(p) + '</div><div class="grow" style="min-width:0"><div class="t ellipsis">' + esc(p.nama) + '</div><div class="s">' + rp(p.harga_jual) + (u ? '' : ' · <span style="color:var(--warn)">belum ada foto</span>') + '</div></div></label>'; }).join('')).join('') +
+      '<div class="help">' + icon('info', 'xs') + 'Produk yang muncul di sini = yang dicentang "Tampilkan di Daftar Menu" pada Produk.</div></div>' +
+      '<div class="card pad"><div class="step-h"><span class="n">2</span><span class="t">Gaya & tata letak</span></div><div class="chips wrap">' + chip('style', MENU_STYLES) + '</div>' +
+      '<div class="field"><span class="lbl">Tata letak</span><div class="chips wrap">' + chip('layout', MENU_LAYOUTS) + '</div></div>' +
+      '<div class="field"><span class="lbl">Ukuran</span><div class="size-grid">' + Object.keys(POSTER_SIZES).map((k) => { const z = POSTER_SIZES[k]; return '<button class="size-tile' + (s.size === k ? ' is-on' : '') + '" data-act="opt" data-key="size" data-v="' + k + '" type="button"><span class="ar" style="width:' + z[4][0] + 'px;height:' + z[4][1] + 'px"></span>' + z[0] + '<span class="muted" style="font-size:11px">' + z[1] + '</span></button>'; }).join('') + '</div></div>' +
+      '<label class="field"><span class="lbl">Judul menu</span><input class="input" data-mk="title" value="' + esc(s.title) + '"></label>' +
+      '<div class="field"><span class="lbl">Produk tanpa foto</span><div class="seg light"><button type="button" data-act="opt" data-key="noPhoto" data-v="teks" class="' + (s.noPhoto === 'teks' ? 'on' : '') + '">Tampilkan teks saja</button><button type="button" data-act="opt" data-key="noPhoto" data-v="ilustrasi" class="' + (s.noPhoto === 'ilustrasi' ? 'on' : '') + '">Buatkan ilustrasi</button></div></div>' +
+      '<div class="row between" style="margin-top:14px"><span style="font-weight:600;font-size:14px">Tulis varian (ukuran, topping)</span><label class="toggle"><input type="checkbox" data-mk="showVar"' + (s.showVar ? ' checked' : '') + '></label></div>' +
+      '<div class="row between" style="margin-top:10px"><span style="font-weight:600;font-size:14px">Alamat & WA di bawah</span><label class="toggle"><input type="checkbox" data-mk="showFoot"' + (s.showFoot ? ' checked' : '') + '></label></div></div>' +
+      '</div><div class="stack">' +
+      '<div class="card pad"><div class="step-h"><span class="n">3</span><span class="t">Prompt siap pakai</span><span class="grow"></span><div class="seg light" style="width:auto"><button data-act="opt" data-key="lang" data-v="id" type="button" class="' + (s.lang === 'id' ? 'on' : '') + '">ID</button><button data-act="opt" data-key="lang" data-v="en" type="button" class="' + (s.lang === 'en' ? 'on' : '') + '">EN</button></div></div><div class="js-out"></div></div>' +
+      '<div class="card pad"><div class="step-h"><span class="n">4</span><span class="t">Lampirkan foto ke AI</span></div><div class="js-photos"></div></div>' +
+      '</div></div>';
+    this.paintCount(el); this.renderPhotos(el); this.paintOut(el);
+  },
+  paintCount(el) { const n = this.st.sel.size, f = this.photos().length; const c = $('.js-count', el); if (c) c.textContent = n + ' produk · ' + f + ' foto'; },
+  renderPhotos(el) {
+    const box = $('.js-photos', el); if (!box) return;
+    const ph = this.photos(), logo = App.settings.logo_url;
+    box.innerHTML = (ph.length > 10 ? '<div class="banner warn" style="margin-bottom:10px">' + icon('alert', 'sm') + '<div>Ada <b>' + ph.length + ' foto</b>. Gemini/ChatGPT umumnya menerima ±10 gambar per pesan — kirim bertahap (prompt + 10 foto pertama, lalu sisanya) atau kurangi produk.</div></div>' : '') +
+      '<div class="stack" style="gap:8px">' +
+      (logo ? imgChip(logo, 'Logo', 'logo.png', true) : '<a class="btn sm outline" href="#/pengaturan">' + icon('upload', 'xs') + 'Unggah logo dulu di Pengaturan</a>') +
+      ph.map((x, i) => imgChip(x.u, 'Foto ' + (i + 1) + ' — ' + x.p.nama, String(i + 1).padStart(2, '0') + '-' + x.p.nama.replace(/\W+/g, '-') + '.jpg')).join('') +
+      (ph.length ? '' : '<div class="muted" style="font-size:13.5px">Belum ada produk terpilih yang punya foto. Tambahkan foto di menu Produk agar AI memakai foto asli.</div>') + '</div>' +
+      (ph.length > 1 ? '<button class="btn outline block" data-act="dlall" type="button" style="margin-top:10px">' + icon('download', 'sm') + 'Unduh semua foto (' + ph.length + ')</button>' : '') +
+      '<div class="help">' + icon('info', 'xs') + '<span>Urutan <b>Foto 1, 2, 3…</b> sama dengan yang disebut di prompt. <b>Salin</b> → tempel (Ctrl+V / tekan lama → Tempel) di Gemini/ChatGPT, atau <b>Unduh semua</b> lalu lampirkan sekaligus.</span></div>';
+    const imgs = $$('.img-chip img[data-src]', box);
+    ImgCache.get(imgs.map((i) => i.dataset.src)).then((m) => imgs.forEach((i) => { if (m[i.dataset.src]) { i.style.visibility = ''; i.src = m[i.dataset.src]; } })).catch(() => {});
+  },
+  build() {
+    const s = this.st, st = App.settings, sty = MENU_STYLES[s.style], lay = MENU_LAYOUTS[s.layout], z = POSTER_SIZES[s.size];
+    const groups = this.groups(), ph = this.photos(), num = {}; ph.forEach((x, i) => { num[x.p.produk_id] = i + 1; });
+    const color = st.warna_primer || '#F26B1D', land = POSTER_LANDSCAPE[s.size];
+    const items = (lang) => groups.map((g) => String(g.cat.nama).toUpperCase() + '\n' + g.items.map((p) => '- ' + p.nama + ' — ' + rp(p.harga_jual) + (s.showVar && varSummary(p.produk_id) ? ' (' + varSummary(p.produk_id) + ')' : '') + (num[p.produk_id] ? ' [Foto ' + num[p.produk_id] + ']' : (lang === 'id' ? ' [tanpa foto]' : ' [no photo]'))).join('\n')).join('\n\n');
+    const fotoList = ph.map((x, i) => 'Foto ' + (i + 1) + ' = ' + x.p.nama).join(', ');
+    const foot = s.showFoot ? [st.alamat, st.no_wa ? 'WA ' + st.no_wa : ''].filter(Boolean).join(' · ') : '';
+    const nId = s.noPhoto === 'teks' ? 'Produk bertanda [tanpa foto] cukup ditulis sebagai teks rapi (nama & harga) — JANGAN mengarang foto produk.' : 'Untuk produk bertanda [tanpa foto], buatkan ilustrasi sederhana bergaya sama (bukan foto realistis) agar tidak terkesan foto asli.';
+    const nEn = s.noPhoto === 'teks' ? 'Items marked [no photo] should appear as neat text only (name & price) — do NOT invent product photos.' : 'For items marked [no photo], create simple illustrations in the same style (not photorealistic) so they are not mistaken for real photos.';
+    const id = 'Buatkan desain DAFTAR MENU ' + z[3] + ' untuk usaha kuliner "' + (st.nama_toko || '') + '".\n\n' +
+      'FOTO TERLAMPIR: ' + (ph.length ? 'saya melampirkan ' + ph.length + ' foto produk dengan urutan: ' + fotoList + '.' : 'tidak ada foto produk.') + (st.logo_url ? ' Saya juga melampirkan logo toko.' : '') +
+      (ph.length ? ' Pakai foto asli tersebut untuk item yang sesuai — pertahankan bentuk, warna & tampilan asli produk; boleh merapikan pencahayaan, latar & potongan agar seragam. Jangan menukar foto antar produk.' : '') + '\n\n' +
+      'GAYA: ' + sty.id + '. Warna utama brand ' + color + ' dipadukan warna netral yang serasi.\n\n' +
+      'TATA LETAK: ' + lay.id + (land ? '; format melebar, kategori disusun dalam beberapa kolom berdampingan' : '; kategori disusun dari atas ke bawah') + '. Judul kategori jelas, jarak antar item lega, semua harga sejajar & mudah dibaca.\n\n' +
+      'HEADER: judul besar "' + s.title + '", nama toko "' + (st.nama_toko || '') + '"' + (st.tagline ? ', tagline "' + st.tagline + '"' : '') + (st.logo_url ? ', logo terlampir di bagian atas (jangan diubah)' : '') + '.\n\n' +
+      'ISI MENU (tulis PERSIS — ejaan nama & angka harga jangan diubah, jangan menambah item lain):\n' + items('id') + '\n\n' +
+      nId + '\n\n' + (foot ? 'FOOTER: "' + foot + '"\n\n' : '') +
+      'KUALITAS: teks tajam & kontras tinggi, hierarki jelas (kategori > nama > harga), tanpa watermark, tanpa teks tambahan, resolusi tinggi siap cetak.';
+    const en = 'Create a MENU BOARD design, ' + z[2] + ', for the food business "' + (st.nama_toko || '') + '".\n\n' +
+      'ATTACHED PHOTOS: ' + (ph.length ? 'I attached ' + ph.length + (ph.length === 1 ? ' product photo: ' : ' product photos in this order: ') + fotoList + '.' : 'no product photos.') + (st.logo_url ? ' I also attached the store logo.' : '') +
+      (ph.length ? ' Use these real photos for the matching items — keep each product\'s real shape, color and look; you may clean up lighting, background and cropping so they look consistent. Never swap photos between products.' : '') + '\n\n' +
+      'STYLE: ' + sty.en + '. Brand primary color ' + color + ' with harmonious neutrals.\n\n' +
+      'LAYOUT: ' + lay.en + (land ? '; wide format, categories arranged in several side-by-side columns' : '; categories stacked top to bottom') + '. Clear category headings, generous spacing, all prices aligned and easy to read.\n\n' +
+      'HEADER: large title "' + s.title + '", store name "' + (st.nama_toko || '') + '"' + (st.tagline ? ', tagline "' + st.tagline + '"' : '') + (st.logo_url ? ', attached logo at the top (do not alter it)' : '') + '.\n\n' +
+      'MENU CONTENT (write EXACTLY as below, in Indonesian — do not change spelling or prices, do not add items):\n' + items('en') + '\n\n' +
+      nEn + '\n\n' + (foot ? 'FOOTER: "' + foot + '"\n\n' : '') +
+      'QUALITY: crisp high-contrast text, clear hierarchy (category > name > price), no watermark, no extra text, high resolution print-ready.';
+    return { id, en, judul: 'Menu AI · ' + s.title + ' · ' + groups.reduce((n, g) => n + g.items.length, 0) + ' produk' };
+  },
+  paintOut(el) {
+    const box = $('.js-out', el); if (!box) return;
+    if (!this.st.sel.size) { box.innerHTML = '<div class="muted">Pilih minimal 1 produk.</div>'; return; }
+    const o = this.st.out = this.build(), t = this.st.lang === 'id' ? o.id : o.en;
+    box.innerHTML = '<div class="prompt-box">' + esc(t) + '</div><div class="grid-2" style="margin-top:10px"><button class="btn primary" data-act="copy" type="button">' + icon('copy', 'sm') + 'Salin Prompt</button><button class="btn outline" data-act="save" type="button">' + icon('check', 'sm') + 'Simpan ke Riwayat</button></div>';
+  },
+  actions: {
+    opt(a, e, el) { this.st[a.dataset.key] = a.dataset.v; this.render(el); },
+    selall(a, e, el) { this.st.sel = new Set(menuProducts().flatMap((g) => g.items.map((p) => p.produk_id))); this.render(el); },
+    selphoto(a, e, el) { this.st.sel = new Set(menuProducts().flatMap((g) => g.items.filter((p) => p._fotoLocal || p.foto_url).map((p) => p.produk_id))); this.render(el); },
+    selnone(a, e, el) { this.st.sel = new Set(); this.render(el); },
+    copy() { const o = this.st.out; if (o) copyText(this.st.lang === 'id' ? o.id : o.en); },
+    dl(a) { return Pages.poster.actions.dl(a); },
+    cpimg(a) { return Pages.poster.actions.cpimg(a); },
+    async dlall(a) {
+      busy(a, true);
+      try {
+        const ph = this.photos(), map = await ImgCache.get(ph.map((x) => x.u));
+        for (let i = 0; i < ph.length; i++) {
+          const d = map[ph[i].u]; if (!d) continue;
+          const b = await (await fetch(d)).blob(), u = URL.createObjectURL(b), l = document.createElement('a');
+          l.href = u; l.download = String(i + 1).padStart(2, '0') + '-' + ph[i].p.nama.replace(/\W+/g, '-') + '.jpg'; document.body.appendChild(l); l.click(); l.remove();
+          setTimeout(() => URL.revokeObjectURL(u), 15000);
+          await sleep(350);                                   // jeda agar browser tidak memblokir unduhan beruntun
+        }
+        toast(ph.length + ' foto tersimpan ke folder Unduhan (jika diminta, izinkan "unduh banyak file")', 'ok', 4500);
+      } catch (e) { toast(e.message, 'bad'); }
+      busy(a, false);
+    },
+    save(a) { return Pages.poster.actions.save.call(this, a); },
+    history(a) { return Pages.poster.actions.history.call(Pages.poster, a); }
   }
 });

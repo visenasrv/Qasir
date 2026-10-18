@@ -14,7 +14,7 @@ Pages.login = {
     $('#app').innerHTML = '<div class="login"><div class="box">' +
       '<div class="row" style="justify-content:flex-end">' + (online ? '<span class="pill ok"><span class="dot"></span>Online</span>' : '<span class="pill warn"><span class="dot"></span>Offline</span>') + '</div>' +
       '<div class="brand">' + (brand.logo_url ? '<div class="logo lg" style="margin:0 auto"><img src="' + esc(brand.logo_url) + '" alt="" onerror="this.remove()"></div>' : '<div class="logo lg" style="margin:0 auto">' + esc((brand.nama_toko || 'Q').charAt(0)) + '</div>') +
-      '<h2>' + esc(brand.nama_toko || 'Qasir') + '</h2><div class="muted">Aplikasi Kasir Qasir</div></div>' +
+      '<h2>' + esc(brand.nama_toko || 'Qasir') + '</h2><div class="muted">Qasir</div></div>' +
       '<form class="card pad" id="loginForm" autocomplete="off">' +
       '<label class="field"><span class="lbl">USERNAME</span><div class="input-wrap">' + icon('user', 'sm') + '<input class="input" id="lgUser" placeholder="contoh: kasir1" autocapitalize="none" autocomplete="username" value="' + esc(last) + '"></div></label>' +
       '<div class="field"><span class="lbl">PIN <button type="button" class="icon-btn" id="lgEye" style="width:32px;height:32px" aria-label="Lihat PIN">' + icon('eye', 'sm') + '</button></span>' +
@@ -90,7 +90,7 @@ const Cart = {
   /** Hitung subtotal, promo otomatis, diskon manual, total — real-time. */
   totals() {
     const boot = App.boot || {}, st = App.settings, now = Date.now();
-    const promos = (boot.promos || []).filter((p) => p.status_aktif && (!p.mulai || new Date(p.mulai).getTime() <= now) && (!p.selesai || endOfDay(p.selesai).getTime() >= now));
+    const promos = (boot.promos || []).filter((p) => p.status_aktif && p.kanal !== 'ONLINE' && (!p.mulai || new Date(p.mulai).getTime() <= now) && (!p.selesai || endOfDay(p.selesai).getTime() >= now));
     const subtotal = this.lines.reduce((s, l) => s + this.price(l) * l.qty, 0);
     const names = new Set();
     let itemDisc = 0;
@@ -126,6 +126,7 @@ const Cart = {
   }
 };
 
+const CAT_COLORS = ['#F26B1D', '#2563EB', '#16A34A', '#9333EA', '#D97706', '#DB2777', '#0891B2', '#65A30D'];
 function productHasOptions(pid) { return (App.boot.variants || []).some((v) => v.produk_id === pid); }
 function isHabis(p) { return p.tipe_stok === 'STOK_JADI' && toNum(p.stok) <= 0; }
 
@@ -139,6 +140,7 @@ page('kasir', {
       '<div class="js-store-banner"></div>' +
       '<div class="kasir-layout"><div class="kasir-main">' +
       '<div class="searchbar"><div class="input-wrap">' + icon('search', 'sm') + '<input class="input js-q" type="search" placeholder="Cari produk..." autocomplete="off"></div>' +
+      '<button class="view-btn js-view" data-act="view" type="button"></button>' +
       '<button class="scan-btn" data-act="scan" type="button">' + icon('scan-barcode', 'sm') + 'Scan</button></div>' +
       '<div class="cat-row"><div class="chips js-cats"></div></div>' +
       '<div class="pgrid js-grid"></div></div>' +
@@ -193,19 +195,33 @@ page('kasir', {
     const qty = Cart.qtyOf(p.produk_id), opt = productHasOptions(p.produk_id);
     const stockTxt = p.tipe_stok === 'STOK_JADI' ? 'Stok ' + fmtNum(p.stok) : '';
     if (isHabis(p)) return '<span class="st">' + stockTxt + '</span><span class="pill bad sm">Habis</span>';
-    if (opt) return '<span class="st">' + stockTxt + '</span><button class="btn outline-brand xs" data-act="tap" data-pid="' + esc(p.produk_id) + '" type="button">Pilih</button>';
+    if (opt) return '<span class="st">' + (stockTxt || (this.view() !== 'foto' ? '<span class="vtag">Varian</span>' : '')) + '</span><button class="btn outline-brand xs" data-act="tap" data-pid="' + esc(p.produk_id) + '" type="button">Pilih</button>';
     if (qty) return '<span class="st">' + stockTxt + '</span><div class="stepper"><button data-act="dec" data-pid="' + esc(p.produk_id) + '" type="button" aria-label="Kurangi">' + icon('minus', 'sm') + '</button><span class="v">' + qty + '</span><button class="plus" data-act="tap" data-pid="' + esc(p.produk_id) + '" type="button" aria-label="Tambah">' + icon('plus', 'sm') + '</button></div>';
     return '<span class="st">' + stockTxt + '</span><button class="add-btn" data-act="tap" data-pid="' + esc(p.produk_id) + '" type="button" aria-label="Tambah">' + icon('plus', 'sm') + '</button>';
+  },
+  /** Tampilan produk: 'ringkas' (default, tanpa gambar — seperti mesin kasir) atau 'foto'. Disimpan per perangkat. */
+  view() { return Store.get('kasirView', 'ringkas') === 'foto' ? 'foto' : 'ringkas'; },
+  renderViewBtn(el) {
+    const b = $('.js-view', el); if (!b) return;
+    const foto = this.view() === 'foto';
+    b.innerHTML = icon(foto ? 'rows' : 'image', 'sm') + '<span class="hide-sm">' + (foto ? 'Ringkas' : 'Foto') + '</span>';
+    b.setAttribute('aria-label', foto ? 'Tampilan ringkas tanpa gambar' : 'Tampilkan gambar produk');
+    b.title = b.getAttribute('aria-label');
   },
   renderGrid(el) {
     const list = this.list();
     const grid = $('.js-grid', el);
+    const compact = this.view() !== 'foto';
+    grid.classList.toggle('compact', compact);
+    this.renderViewBtn(el);
+    const catIdx = {}; (App.boot.categories || []).forEach((c, i) => { catIdx[c.kategori_id] = i; });
     if (!list.length) { grid.innerHTML = '<div style="grid-column:1/-1">' + emptyState('package', 'Produk tidak ditemukan', this.state.q ? 'Coba kata kunci lain.' : (App.isOwner ? 'Tambahkan produk di menu Produk.' : 'Belum ada produk.'), App.isOwner ? '<a class="btn primary sm" href="#/produk-form/baru">' + icon('plus', 'sm') + 'Tambah Produk</a>' : '') + '</div>'; return; }
     grid.innerHTML = list.map((p) => {
       const qty = Cart.qtyOf(p.produk_id), habis = isHabis(p), opt = productHasOptions(p.produk_id);
-      return '<div class="pcard' + (qty ? ' in-cart' : '') + (habis ? ' habis' : '') + '" data-act="tap" data-pid="' + esc(p.produk_id) + '" role="button" tabindex="0">' +
+      const ci = catIdx[p.kategori_id];
+      return '<div class="pcard' + (qty ? ' in-cart' : '') + (habis ? ' habis' : '') + '" data-act="tap" data-pid="' + esc(p.produk_id) + '" role="button" tabindex="0"' + (compact ? ' style="--cat:' + CAT_COLORS[(ci === undefined ? 0 : ci) % CAT_COLORS.length] + '"' : '') + '>' +
         (qty ? '<span class="qbadge">' + qty + '</span>' : '<span class="qbadge" hidden></span>') +
-        '<div class="pimg">' + productImg(p) + (opt ? '<span class="tag pill brand sm">Varian</span>' : '') + '</div>' +
+        (compact ? '' : '<div class="pimg">' + productImg(p) + (opt ? '<span class="tag pill brand sm">Varian</span>' : '') + '</div>') +
         '<div class="nm">' + esc(p.nama) + '</div><div class="pr">' + rp(p.harga_jual) + '</div>' +
         '<div class="ft">' + this.cardFoot(p) + '</div></div>';
     }).join('');
@@ -228,6 +244,7 @@ page('kasir', {
   },
   actions: {
     cat(a, e, el) { this.state.cat = a.dataset.id; this.renderCats(el); this.renderGrid(el); },
+    view(a, e, el) { Store.set('kasirView', this.view() === 'foto' ? 'ringkas' : 'foto'); this.renderGrid(el); },
     tap(a) { const p = Local.product(a.dataset.pid); if (!p) return; addProductFlow(p); },
     dec(a) { const l = Cart.lines.find((x) => x.produk_id === a.dataset.pid && !x.varian.length && !x.catatan) || Cart.lines.filter((x) => x.produk_id === a.dataset.pid).pop(); if (l) Cart.setQty(l.key, l.qty - 1); },
     scan(a, e, el) {

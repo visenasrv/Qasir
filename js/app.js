@@ -8,14 +8,14 @@
 const NAV_KASIR = [['kasir', 'Kasir', 'cart'], ['transaksi', 'Riwayat', 'receipt'], ['stok', 'Stok', 'package'], ['utang', 'Utang', 'notebook'], ['akun', 'Akun', 'user', true]];
 const NAV_OWNER = [['kasir', 'Kasir', 'cart'], ['transaksi', 'Riwayat', 'receipt'], ['dashboard', 'Dashboard', 'dashboard'], ['stok', 'Stok', 'package'], ['lainnya', 'Lainnya', 'grid', true]];
 const SIDE_OWNER = [
-  ['OPERASIONAL', [['kasir', 'Kasir', 'cart'], ['transaksi', 'Riwayat Transaksi', 'receipt'], ['stok', 'Stok', 'package'], ['utang', 'Utang Pelanggan', 'notebook']]],
+  ['OPERASIONAL', [['kasir', 'Kasir', 'cart'], ['pesanan', 'Pesanan Online', 'inbox'], ['transaksi', 'Riwayat Transaksi', 'receipt'], ['stok', 'Stok', 'package'], ['utang', 'Utang Pelanggan', 'notebook']]],
   ['BISNIS', [['dashboard', 'Dashboard', 'dashboard'], ['laporan', 'Laporan', 'file'], ['produk', 'Produk', 'layers'], ['hpp', 'Kalkulator HPP', 'calculator'], ['bahan', 'Bahan & Biaya', 'coffee'], ['promo', 'Promo & Diskon', 'tag']]],
-  ['PROMOSI', [['menu', 'Daftar Menu', 'utensils'], ['poster', 'Prompt Poster', 'sparkles'], ['label', 'Cetak Barcode', 'barcode']]],
+  ['PROMOSI', [['online', 'Jual Online', 'globe'], ['menu', 'Daftar Menu', 'utensils'], ['menu-ai', 'Prompt Menu AI', 'sparkles'], ['poster', 'Prompt Poster', 'image'], ['label', 'Cetak Barcode', 'barcode']]],
   ['PENGATURAN', [['karyawan', 'Karyawan', 'users'], ['pengaturan', 'Pengaturan Toko', 'settings'], ['tinjau', 'Perlu Ditinjau', 'inbox']]]
 ];
 /** Halaman turunan → tab induk di bottom nav. */
-const NAV_PARENT = { bayar: 'kasir', sukses: 'kasir', 'produk-form': 'produk', hpp: 'produk' };
-const OWNER_SUB = ['produk', 'hpp', 'bahan', 'promo', 'laporan', 'menu', 'poster', 'label', 'karyawan', 'pengaturan', 'tinjau', 'utang', 'akun', 'produk-form'];
+const NAV_PARENT = { bayar: 'kasir', sukses: 'kasir', 'produk-form': 'produk' };
+const OWNER_SUB = ['online', 'menu-ai', 'produk', 'hpp', 'bahan', 'promo', 'laporan', 'menu', 'poster', 'label', 'karyawan', 'pengaturan', 'tinjau', 'utang', 'akun', 'produk-form'];
 
 const Nav = {
   update(name) {
@@ -39,13 +39,17 @@ const Shell = {
     const side = $('#side'), bn = $('#bnav'); if (!side || !bn || !App.session) return;
     const st = App.settings, u = App.user, owner = App.isOwner;
     const badge = '<span class="badge-count js-pending-count" hidden></span>';
-    bn.innerHTML = (owner ? NAV_OWNER : NAV_KASIR).map((n) => '<a href="#/' + n[0] + '" data-tab="' + n[0] + '">' + icon(n[2]) + '<span>' + n[1] + '</span>' + (n[3] ? badge : '') + '</a>').join('');
-    const link = (n) => '<a href="#/' + n[0] + '" data-tab="' + n[0] + '">' + icon(n[2], 'sm') + n[1] + '</a>';
+    const ol = onlineOn(), obadge = '<span class="badge-count js-order-count" hidden></span>';
+    const navs = (owner ? NAV_OWNER : NAV_KASIR).slice(); if (ol) navs.splice(1, 0, ['pesanan', 'Pesanan', 'inbox', false, true]);
+    bn.classList.toggle('six', navs.length > 5);
+    bn.innerHTML = navs.map((n) => '<a href="#/' + n[0] + '" data-tab="' + n[0] + '">' + icon(n[2]) + '<span>' + n[1] + '</span>' + (n[3] ? badge : '') + (n[4] ? obadge : '') + '</a>').join('');
+    const link = (n) => n[0] === 'pesanan' && !ol ? '' : '<a href="#/' + n[0] + '" data-tab="' + n[0] + '">' + icon(n[2], 'sm') + n[1] + (n[0] === 'pesanan' ? obadge : '') + '</a>';
+    const kasirSide = NAV_KASIR.slice(0, 4); if (ol) kasirSide.splice(1, 0, ['pesanan', 'Pesanan Online', 'inbox']);
     side.innerHTML = '<div class="brand">' + logoHtml() + '<div class="grow" style="min-width:0"><div class="t ellipsis">' + esc(st.nama_toko || 'Qasir') + '</div><div class="s">' + (owner ? 'Pemilik' : 'Kasir') + (App.session.device && App.session.device.kode ? ' · ' + esc(App.session.device.kode) : '') + '</div></div></div>' +
-      (owner ? SIDE_OWNER.map((g) => '<div class="grp">' + g[0] + '</div>' + g[1].map(link).join('')).join('') : NAV_KASIR.slice(0, 4).map(link).join('')) +
+      (owner ? SIDE_OWNER.map((g) => '<div class="grp">' + g[0] + '</div>' + g[1].map(link).join('')).join('') : kasirSide.map(link).join('')) +
       '<div class="foot"><a href="#/akun" data-tab="akun"><span class="thumb" style="width:32px;height:32px;border-radius:10px;font-size:12px">' + esc(initials(u.nama)) + '</span><span class="grow ellipsis" style="min-width:0">' + esc(u.nama) + '</span>' + badge + '</a><div style="padding:8px 4px 0">' + syncPill() + '</div></div>';
     if (App.current) Nav.update(App.current);
-    updateSyncUI();
+    updateSyncUI(); if (window.Orders) Orders.setBadge(Orders.baru);
   },
   loading(msg) { $('#main').innerHTML = '<div class="empty" style="min-height:70dvh;justify-content:center"><div class="spinner"></div><div class="t">' + esc(msg) + '</div></div>'; },
   async start() {
@@ -77,6 +81,7 @@ const Shell = {
     setTimeout(() => { Boot.refresh(); Sync.heartbeat(true); }, 250);
     checkWarnings();
     prewarmPages();
+    if (onlineOn()) setTimeout(() => Orders.load(true), 600);
   }
 };
 

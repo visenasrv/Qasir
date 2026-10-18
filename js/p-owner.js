@@ -282,7 +282,7 @@ page('laporan', {
         h3('Per kasir') + table(['Kasir', 'Trx', 'Omzet'], d.byKasir.map((p) => '<tr>' + td(esc(p.nama)) + td(p.trx, 1) + td(rp(p.omzet), 1) + '</tr>')) +
         h3('Harian') + table(['Tanggal', 'Trx', 'Omzet', 'Laba'], d.byDay.map((p) => '<tr>' + td(fmtDate(p.tanggal + 'T00:00')) + td(p.trx, 1) + td(rp(p.omzet), 1) + td(rp(p.laba), 1) + '</tr>')) +
         (d.batal.length ? h3('Transaksi dibatalkan', '#DC2626') + table(['Nota', 'Total', 'Alasan'], d.batal.map((b) => '<tr style="color:#DC2626">' + td(esc(b.no_nota)) + td(rp(b.total), 1) + td(esc(b.alasan || '-') + ' (' + esc(b.oleh || '-') + ')', 1) + '</tr>')) : '') +
-        '<div style="color:#9CA3AF;font-size:11px;margin-top:10px">Dibuat dari aplikasi Qasir · ' + fmtDT(new Date()) + '</div>';
+        '<div style="color:#9CA3AF;font-size:11px;margin-top:10px">Dibuat dengan Qasir · ' + fmtDT(new Date()) + '</div>';
       runExport(a, () => Exporter.pdf(el, 'Laporan-' + (st.nama_toko || 'Qasir').replace(/\W+/g, '-') + '-' + ymd(d.from) + '_' + ymd(d.to) + '.pdf', { width: 780, pixelRatio: 2, page: 'a4', breakSel: 'tr, h3', keepSel: 'h3, tr:first-child' }));
     }
   }
@@ -350,7 +350,7 @@ page('produk-form', {
     $('.topbar h1', el).textContent = isNew ? 'Tambah Produk' : 'Ubah Produk';
     const groups = [];
     if (p) (App.boot.variants || []).filter((v) => v.produk_id === p.produk_id).forEach((v) => { let g = groups.find((x) => x.grup === v.grup); if (!g) { g = { grup: v.grup, wajib: !!v.wajib_pilih, items: [] }; groups.push(g); } g.items.push({ varian_id: v.varian_id, nama: v.nama, tambahan_harga: toNum(v.tambahan_harga), tambahan_hpp: toNum(v.tambahan_hpp) }); });
-    this.f = { isNew, produk_id: p ? p.produk_id : shortId('P'), nama: p ? p.nama : '', kategori_id: p ? p.kategori_id : ((App.boot.categories || [])[0] || {}).kategori_id || '', tipe_stok: p ? p.tipe_stok : 'STOK_JADI', harga_jual: p ? toNum(p.harga_jual) : 0, stok: 0, stok_minimum: p ? toNum(p.stok_minimum) : 5, satuan: p ? p.satuan || 'pcs' : 'pcs', tampil_di_menu: p ? p.tampil_di_menu !== false : true, kode_barcode: p ? String(p.kode_barcode || '') : '', foto_url: p ? p.foto_url : '', foto: null, hapusFoto: false, groups };
+    this.f = { isNew, produk_id: p ? p.produk_id : shortId('P'), nama: p ? p.nama : '', kategori_id: p ? p.kategori_id : ((App.boot.categories || [])[0] || {}).kategori_id || '', tipe_stok: p ? p.tipe_stok : 'STOK_JADI', harga_jual: p ? toNum(p.harga_jual) : 0, stok: 0, stok_minimum: p ? toNum(p.stok_minimum) : 5, satuan: p ? p.satuan || 'pcs' : 'pcs', tampil_di_menu: p ? p.tampil_di_menu !== false : true, deskripsi: p ? p.deskripsi || '' : '', kode_barcode: p ? String(p.kode_barcode || '') : '', foto_url: p ? p.foto_url : '', foto: null, hapusFoto: false, groups };
     this.render(el);
   },
   render(el) {
@@ -373,6 +373,7 @@ page('produk-form', {
       '<div class="field"><span class="lbl">Harga Jual <span class="req">*</span>' + (!f.isNew ? '<a class="link-btn" href="#/hpp/' + esc(f.produk_id) + '" style="font-size:13px">Lihat HPP' + (hppVal ? ' → ' + rp(hppVal) : '') + '</a>' : '') + '</span><div class="input-wrap">' + moneyInput('data-f="harga_jual" placeholder="0"', f.harga_jual) + '<span class="suffix pill sm js-margin" hidden></span></div><div class="help js-margin-info"></div></div>' +
       (f.tipe_stok === 'STOK_JADI' ? '<div class="grid-2">' + (f.isNew ? '<label class="field"><span class="lbl">Stok awal</span><input class="input" data-f="stok" inputmode="numeric" value="' + (f.stok || '') + '" placeholder="0"></label>' : '') +
         '<label class="field"' + (f.isNew ? ' style="margin-top:14px"' : '') + '><span class="lbl">Stok minimum</span><input class="input" data-f="stok_minimum" inputmode="numeric" value="' + (f.stok_minimum || '') + '" placeholder="5"></label>' + (f.isNew ? '' : '<label class="field" style="margin-top:14px"><span class="lbl">Satuan</span><input class="input" data-f="satuan" value="' + esc(f.satuan) + '"></label>') + '</div>' : '') +
+      '<label class="field"><span class="lbl">Deskripsi singkat <span class="muted" style="font-weight:500">(opsional · tampil di toko online)</span></span><textarea class="textarea" data-f="deskripsi" rows="2" maxlength="200" placeholder="contoh: Kopi susu gula aren khas kami, manis legit">' + esc(f.deskripsi || '') + '</textarea></label>' +
       '<div class="row between" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line-2)"><div><b style="font-size:14px">Tampilkan di Daftar Menu</b><div class="muted" style="font-size:12.5px">Masuk ke menu cetak & WA</div></div><label class="toggle"><input type="checkbox" data-f="tampil_di_menu"' + (f.tampil_di_menu ? ' checked' : '') + '></label></div></div>' +
       '<div class="card pad" style="margin-top:12px"><div class="card-h"><span class="sec-title">Barcode</span>' + (!f.isNew ? '<a class="link-btn" href="#/label/' + esc(f.produk_id) + '">Cetak Label</a>' : '') + '</div>' +
       '<div style="border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;background:var(--bg)">' + (f.kode_barcode ? '<div style="height:56px;max-width:260px;margin:0 auto">' + Code128.svg(f.kode_barcode, { height: 50 }) + '</div><div class="mono" style="margin-top:6px;letter-spacing:.1em">' + esc(f.kode_barcode) + '</div>' : '<div class="muted" style="padding:14px 0">Kode dibuat otomatis saat disimpan</div>') + '</div>' +
@@ -440,12 +441,12 @@ page('produk-form', {
       const varian = [];
       f.groups.forEach((g) => g.items.forEach((it) => { if (it.nama) varian.push({ varian_id: it.varian_id, grup: g.grup || 'Pilihan', nama: it.nama, tambahan_harga: it.tambahan_harga, tambahan_hpp: it.tambahan_hpp, wajib_pilih: g.wajib }); }));
       const prev = Local.product(f.produk_id);
-      const prod = Object.assign({}, prev || {}, { produk_id: f.produk_id, nama: f.nama, kategori_id: f.kategori_id, tipe_stok: f.tipe_stok, harga_jual: f.harga_jual, stok_minimum: f.stok_minimum, satuan: f.satuan || 'pcs', tampil_di_menu: f.tampil_di_menu, kode_barcode: f.kode_barcode || (prev ? prev.kode_barcode : ''), status_aktif: true });
+      const prod = Object.assign({}, prev || {}, { produk_id: f.produk_id, nama: f.nama, kategori_id: f.kategori_id, tipe_stok: f.tipe_stok, harga_jual: f.harga_jual, stok_minimum: f.stok_minimum, satuan: f.satuan || 'pcs', tampil_di_menu: f.tampil_di_menu, deskripsi: f.deskripsi || '', kode_barcode: f.kode_barcode || (prev ? prev.kode_barcode : ''), status_aktif: true });
       if (!prev) prod.stok = f.tipe_stok === 'STOK_JADI' ? f.stok : 0;
       if (f.foto) prod._fotoLocal = f.foto; if (f.hapusFoto) { prod.foto_url = ''; prod._fotoLocal = ''; }
       const newVars = varian.map((v, i) => Object.assign({ produk_id: f.produk_id, urutan: i + 1 }, v));
       replaceRoute('produk');
-      await ownerWrite('saveProduct', { produk: { produk_id: f.produk_id, kode_barcode: f.kode_barcode, nama: f.nama, kategori_id: f.kategori_id, tipe_stok: f.tipe_stok, harga_jual: f.harga_jual, stok: f.stok, stok_minimum: f.stok_minimum, satuan: f.satuan, tampil_di_menu: f.tampil_di_menu }, varian, fotoDataUrl: f.foto || '', hapusFoto: f.hapusFoto }, {
+      await ownerWrite('saveProduct', { produk: { produk_id: f.produk_id, kode_barcode: f.kode_barcode, nama: f.nama, kategori_id: f.kategori_id, tipe_stok: f.tipe_stok, harga_jual: f.harga_jual, stok: f.stok, stok_minimum: f.stok_minimum, satuan: f.satuan, tampil_di_menu: f.tampil_di_menu, deskripsi: f.deskripsi || '' }, varian, fotoDataUrl: f.foto || '', hapusFoto: f.hapusFoto }, {
         msg: f.foto ? 'Produk disimpan · foto sedang diunggah…' : 'Produk disimpan',
         apply: () => {
           const u1 = replaceIn(App.boot.products, 'produk_id', prod);
@@ -630,13 +631,13 @@ page('bahan', {
     const perDay = st.estMode === 'hari';
     const ex = (b.products || []).find((p) => p.tipe_stok === 'RACIK') || (b.products || [])[0];
     body.innerHTML =
-      '<div class="explain"><b>Apa itu estimasi penjualan?</b> Perkiraan <b>berapa porsi/pcs setiap produk terjual dalam 1 bulan</b>. Tidak harus tepat — cukup perkiraan wajar.' +
+      '<details class="explain js-est-help-box"' + (Store.get('ui:estHelp', true) ? ' open' : '') + '><summary><span>' + icon('info', 'sm') + '<b>Apa itu estimasi penjualan?</b></span><span class="sum-hint"></span></summary><div class="explain-body">Perkiraan <b>berapa porsi/pcs setiap produk terjual dalam 1 bulan</b>. Tidak harus tepat — cukup perkiraan wajar.' +
       '<br><br><b>Untuk apa?</b> Biaya operasional bulanan Anda (gas, listrik, sewa, gaji, dll. = <b>' + rp(totalCost) + '</b>/bulan) harus "ditanggung" oleh semua porsi yang terjual. Aplikasi membaginya rata ke setiap porsi, lalu menambahkannya ke HPP:' +
       '<div class="formula"><span>Biaya operasional/bulan</span><span class="eq">÷</span><span>Total porsi terjual/bulan</span><span class="eq">=</span><span class="res">Biaya operasional per porsi</span></div>' +
       '<ol><li><b>Semakin laris</b> (porsi makin banyak) → beban per porsi makin <b>kecil</b> → HPP turun.</li>' +
       '<li><b>Estimasi terlalu tinggi</b> → HPP terlihat murah padahal tidak → harga jual bisa terlalu rendah. Lebih aman isi angka yang <b>sedikit konservatif</b>.</li>' +
       '<li><b>Cara mudah mengisi:</b> perkirakan laku per hari × jumlah hari buka. Contoh: ' + esc(ex ? ex.nama : 'Kopi Susu') + ' laku ±30 cup/hari × 30 hari = <b>900</b> per bulan. Pilih mode <b>"Per hari"</b> di bawah agar aplikasi yang mengalikan.</li>' +
-      '<li>Sudah ada penjualan? Tekan <b>Isi dari penjualan nyata</b> — aplikasi mengambil rata-rata 30 hari terakhir.</li></ol></div>' +
+      '<li>Sudah ada penjualan? Tekan <b>Isi dari penjualan nyata</b> — aplikasi mengambil rata-rata 30 hari terakhir.</li></ol></div></details>' +
       '<div class="card pad" style="margin-top:12px"><div class="row wrapx" style="gap:10px"><div class="seg light" style="width:auto;flex:1;min-width:220px"><button data-act="estmode" data-v="bulan" type="button" class="' + (!perDay ? 'on' : '') + '">Isi per bulan</button><button data-act="estmode" data-v="hari" type="button" class="' + (perDay ? 'on' : '') + '">Isi per hari</button></div>' +
       (perDay ? '<label class="row" style="gap:8px;font-size:13.5px;font-weight:600">Hari buka/bulan<input class="input js-days" inputmode="numeric" value="' + st.days + '" style="width:70px;min-height:40px;text-align:center"></label>' : '') +
       '<button class="btn outline sm" data-act="estreal" type="button">' + icon('history', 'sm') + 'Isi dari penjualan nyata</button></div></div>' +
@@ -662,6 +663,7 @@ page('bahan', {
       this.estValues = () => $$('[data-est]', body).map((i) => ({ produk_id: i.dataset.est, estimasi_terjual_per_bulan: perDay ? Math.round(toNum(String(i.value).replace(',', '.')) * days) : Math.round(toNum(String(i.value).replace(',', '.'))) })).filter((r) => r.estimasi_terjual_per_bulan > 0);
     };
     body.oninput = (e) => { if (e.target.matches('[data-est], .js-days')) calc(); };
+    const hb = $('.js-est-help-box', body); hb.addEventListener('toggle', () => Store.set('ui:estHelp', hb.open));
     calc();
   },
   actions: {
@@ -746,7 +748,7 @@ page('promo', {
     $('.js-body', el).innerHTML = list.length ? list.map((p) => {
       const active = p.status_aktif && (!p.mulai || new Date(p.mulai) <= now) && (!p.selesai || endOfDay(p.selesai) >= now);
       const target = p.berlaku_untuk === 'PRODUK' ? ((Local.product(p.target_id) || {}).nama || 'produk') : p.berlaku_untuk === 'KATEGORI' ? ((App.boot.categories.find((c) => c.kategori_id === p.target_id) || {}).nama || 'kategori') : 'Semua belanja';
-      return '<div class="card pad" style="margin-bottom:10px"><div class="row"><span class="ico-box ' + (active ? 'ok' : '') + '">' + icon('tag', 'sm') + '</span><div class="grow"><b>' + esc(p.nama) + '</b><div class="muted" style="font-size:13px">' + (p.tipe === 'PERSEN' ? toNum(p.nilai) + '%' : rp(p.nilai)) + ' · ' + esc(target) + (toNum(p.min_belanja) ? ' · min ' + rp(p.min_belanja) : '') + '</div>' +
+      return '<div class="card pad" style="margin-bottom:10px"><div class="row"><span class="ico-box ' + (active ? 'ok' : '') + '">' + icon('tag', 'sm') + '</span><div class="grow"><b>' + esc(p.nama) + '</b><div class="muted" style="font-size:13px">' + (p.tipe === 'PERSEN' ? toNum(p.nilai) + '%' : rp(p.nilai)) + ' · ' + esc(target) + (toNum(p.min_belanja) ? ' · min ' + rp(p.min_belanja) : '') + ((p.kanal || 'SEMUA') !== 'SEMUA' ? ' · <b>' + (p.kanal === 'ONLINE' ? 'Online saja' : 'Kasir saja') + '</b>' : '') + '</div>' +
         '<div class="muted" style="font-size:12.5px">' + (p.mulai || p.selesai ? (p.mulai ? fmtDate(p.mulai) : '…') + ' – ' + (p.selesai ? fmtDate(p.selesai) : '…') : 'Tanpa batas waktu') + '</div></div><label class="toggle"><input type="checkbox" data-tog="' + esc(p.promo_id) + '"' + (p.status_aktif ? ' checked' : '') + '></label></div>' +
         '<div class="row" style="margin-top:10px"><span class="pill ' + (active ? 'ok' : 'neutral') + ' sm">' + (active ? 'Aktif sekarang' : p.status_aktif ? 'Terjadwal / berakhir' : 'Nonaktif') + '</span><span class="grow"></span><button class="btn xs outline" data-act="form" data-id="' + esc(p.promo_id) + '" type="button">' + icon('pencil', 'xs') + 'Ubah</button></div></div>';
     }).join('') : emptyState('tag', 'Belum ada promo', 'Contoh: diskon 10% min. belanja Rp40.000.', '<button class="btn primary" data-act="form" type="button">' + icon('plus', 'sm') + 'Buat Promo</button>');
@@ -756,7 +758,7 @@ page('promo', {
 });
 function openPromoForm(id) {
   const p = id ? App.boot.promos.find((x) => x.promo_id === id) : null;
-  let tipe = p ? p.tipe : 'PERSEN', untuk = p ? p.berlaku_untuk : 'SEMUA';
+  let tipe = p ? p.tipe : 'PERSEN', untuk = p ? p.berlaku_untuk : 'SEMUA', kanal = (p && p.kanal) || 'SEMUA';
   const s = sheet({
     title: p ? 'Ubah Promo' : 'Promo Baru',
     body: '<label class="field"><span class="lbl">Nama promo <span class="req">*</span></span><input class="input" id="pN" value="' + esc(p ? p.nama : '') + '" placeholder="contoh: Promo Jumat Hemat 10%"></label>' +
@@ -764,6 +766,7 @@ function openPromoForm(id) {
       '<label class="field"><span class="lbl">Nilai <span class="req">*</span></span><input class="input big" id="pV" inputmode="numeric" value="' + esc(p ? p.nilai : '') + '"></label>' +
       '<div class="field"><span class="lbl">Berlaku untuk</span><div class="seg light" id="pU"><button data-u="SEMUA" type="button">Semua</button><button data-u="PRODUK" type="button">Produk</button><button data-u="KATEGORI" type="button">Kategori</button></div><select class="select" id="pTarget" style="margin-top:8px"></select></div>' +
       '<label class="field"><span class="lbl">Minimal belanja</span>' + moneyInput('id="pMin" placeholder="0 = tanpa minimal"', p ? p.min_belanja : '') + '</label>' +
+      '<div class="field"><span class="lbl">Berlaku di</span><div class="seg light" id="pK"><button data-k="SEMUA" type="button">Kasir & Online</button><button data-k="KASIR" type="button">Kasir saja</button><button data-k="ONLINE" type="button">Online saja</button></div></div>' +
       '<div class="grid-2"><label class="field"><span class="lbl">Mulai</span><input class="input" type="date" id="pS" value="' + (p && p.mulai ? ymd(p.mulai) : '') + '"></label><label class="field" style="margin-top:14px"><span class="lbl">Selesai</span><input class="input" type="date" id="pE" value="' + (p && p.selesai ? ymd(p.selesai) : '') + '"></label></div>' +
       '<div class="help">' + icon('info', 'xs') + 'Promo nominal pada produk/kategori dihitung per item. Jika beberapa promo cocok, kasir otomatis memakai potongan terbesar.</div>',
     foot: '<div class="row">' + (p ? '<button class="btn danger" id="pDel" type="button">' + icon('trash', 'sm') + '</button>' : '') + '<button class="btn primary grow" id="pSave" type="button">Simpan Promo</button></div>'
@@ -778,10 +781,12 @@ function openPromoForm(id) {
   };
   $('#pT', s.el).onclick = (e) => { const b = e.target.closest('button'); if (b) { tipe = b.dataset.t; $('#pV', s.el).value = ''; paint(); } };
   $('#pU', s.el).onclick = (e) => { const b = e.target.closest('button'); if (b) { untuk = b.dataset.u; paint(); } };
+  const paintK = () => $$('#pK button', s.el).forEach((b) => b.classList.toggle('on', b.dataset.k === kanal));
+  $('#pK', s.el).onclick = (e) => { const b = e.target.closest('button'); if (b) { kanal = b.dataset.k; paintK(); } }; paintK();
   paint();
   if (p && tipe === 'NOMINAL') $('#pV', s.el).value = NF.format(p.nilai);
   $('#pSave', s.el).onclick = () => {
-    const d = { promo_id: p ? p.promo_id : shortId('PM'), nama: $('#pN', s.el).value.trim(), tipe, nilai: tipe === 'PERSEN' ? Math.min(100, toNum($('#pV', s.el).value)) : parseMoney($('#pV', s.el).value), berlaku_untuk: untuk, target_id: untuk === 'SEMUA' ? '' : $('#pTarget', s.el).value, min_belanja: parseMoney($('#pMin', s.el).value), mulai: $('#pS', s.el).value ? new Date($('#pS', s.el).value + 'T00:00').toISOString() : '', selesai: $('#pE', s.el).value ? new Date($('#pE', s.el).value + 'T00:00').toISOString() : '', status_aktif: p ? p.status_aktif : true };
+    const d = { promo_id: p ? p.promo_id : shortId('PM'), nama: $('#pN', s.el).value.trim(), tipe, nilai: tipe === 'PERSEN' ? Math.min(100, toNum($('#pV', s.el).value)) : parseMoney($('#pV', s.el).value), berlaku_untuk: untuk, target_id: untuk === 'SEMUA' ? '' : $('#pTarget', s.el).value, min_belanja: parseMoney($('#pMin', s.el).value), mulai: $('#pS', s.el).value ? new Date($('#pS', s.el).value + 'T00:00').toISOString() : '', selesai: $('#pE', s.el).value ? new Date($('#pE', s.el).value + 'T00:00').toISOString() : '', status_aktif: p ? p.status_aktif : true, kanal };
     if (!d.nama || !(d.nilai > 0)) { toast('Nama dan nilai promo wajib diisi', 'bad'); return; }
     s.close(); ownerWrite('savePromo', d, { apply: () => replaceIn(App.boot.promos, 'promo_id', d), msg: 'Promo disimpan' });
   };

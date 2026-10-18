@@ -453,8 +453,9 @@ page('akun', {
 
 /* ============================================================ LAINNYA */
 const OWNER_MENU = [
+  ['online', 'Jual Online', 'globe'], ['pesanan', 'Pesanan Online', 'inbox'], ['stok', 'Stok', 'package'],
   ['produk', 'Produk', 'package'], ['hpp', 'Kalkulator HPP', 'calculator'], ['bahan', 'Bahan & Biaya', 'coffee'], ['promo', 'Promo', 'tag'],
-  ['laporan', 'Laporan', 'file'], ['utang', 'Utang', 'notebook'], ['menu', 'Daftar Menu', 'utensils'], ['poster', 'Prompt Poster', 'sparkles'],
+  ['laporan', 'Laporan', 'file'], ['utang', 'Utang', 'notebook'], ['menu', 'Daftar Menu', 'utensils'], ['menu-ai', 'Prompt Menu AI', 'sparkles'], ['poster', 'Prompt Poster', 'image'],
   ['label', 'Cetak Barcode', 'barcode'], ['karyawan', 'Karyawan', 'users'], ['pengaturan', 'Pengaturan', 'settings'], ['tinjau', 'Perlu Ditinjau', 'inbox'], ['akun', 'Akun', 'user']
 ];
 page('lainnya', {

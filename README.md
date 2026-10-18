@@ -1,4 +1,4 @@
-# Qasir v1.1 — Aplikasi Kasir UMKM
+# Qasir v1.3
 
 Aplikasi kasir (POS) untuk usaha jajanan, roti, donat & kopi. Frontend statis (GitHub Pages) + backend Google Apps Script sebagai REST API, data di Google Sheets & Google Drive.
 
@@ -13,12 +13,14 @@ Aplikasi kasir (POS) untuk usaha jajanan, roti, donat & kopi. Frontend statis (G
 - **Laporan** laba rugi, per produk/kategori/kasir/metode/hari, ekspor Excel & PDF.
 - **Kalkulator HPP** dari resep + kemasan + alokasi biaya operasional, 3 rekomendasi harga, food cost, mode simulasi.
 - **Produk, Bahan & Biaya, Promo, Karyawan & Perangkat, Pengaturan brand** (logo, warna tema, struk, aturan bisnis).
-- **Daftar Menu** (gambar/PDF/teks WA), **Prompt Poster Promo** (ID/EN untuk AI gambar), **Cetak Label Barcode** (A4 3×8 / thermal).
+- **Daftar Menu** (gambar/PDF/teks WA), **Prompt Menu AI** (menu dengan foto produk), **Prompt Poster Promo** (ID/EN untuk AI gambar), **Cetak Label Barcode** (A4 3×8 / thermal).
+- **Jual Online** (`toko.html`): toko online pelanggan via link & QR meja — ambil/antar/makan di tempat, bayar di tempat atau transfer/QRIS + bukti; banner, pengumuman, urutan menu, best seller, label baru, promo khusus online; pesanan masuk ke **Pesanan Online** (bunyi + badge), stok berkurang saat diterima.
 - **Tutup Toko** → laporan email + PDF otomatis ke pemilik.
 
 ## Struktur
 ```
-index.html            Kerangka aplikasi (SPA)
+index.html            Kerangka aplikasi kasir (SPA)
+toko.html             Toko online untuk pelanggan (publik)
 sw.js                 Service worker: buka instan & offline
 manifest.webmanifest  Pasang sebagai aplikasi di HP
 css/style.css         Desain "Warm Artisanal POS"
@@ -30,6 +32,8 @@ js/p-kasir.js         Login, kasir, varian, pembayaran, sukses
 js/p-ops.js           Riwayat, stok, utang, akun, menu lainnya
 js/p-owner.js         Dashboard, laporan, produk, HPP, bahan, promo, karyawan, pengaturan
 js/p-promo.js         Daftar menu, prompt poster, label barcode
+js/p-online.js        Jual Online: pengaturan toko online & Pesanan Online
+js/toko.js            Toko online pelanggan (+ css/toko.css)
 js/hpp.js barcode.js printer.js icons.js
 ```
 

@@ -1,4 +1,4 @@
-# 📋 Panduan Instalasi — Qasir v1.1 (Aplikasi Kasir UMKM)
+# 📋 Panduan Instalasi — Qasir v1.3
 
 Qasir terdiri dari dua bagian:
 
@@ -11,7 +11,7 @@ Urutan wajib: **Backend dulu → dapat URL `/exec` → isi ke frontend → uploa
 
 Waktu yang dibutuhkan: ± 30–45 menit untuk pertama kali.
 
-> **Sudah memasang v1.0?** Langsung ke [Bagian G — Update dari v1.0 ke v1.1](#bagian-g--update-dari-v10-ke-v11).
+> **Sudah memasang versi sebelumnya?** Langsung ke [Bagian G — Cara update versi](#bagian-g--cara-update-versi).
 
 ---
 
@@ -222,6 +222,10 @@ Tanda berhasil: muncul `Writing objects: 100%` dan `* [new branch] main -> main`
 | Tampil versi lama setelah update | Cache | Naikkan `VERSION` di `sw.js`, tutup-buka aplikasi |
 | *"Sesi berakhir"* | Token 8 jam habis | Masukkan PIN di dialog yang muncul; data offline tetap aman |
 | Kamera laptop tidak terbuka / *"Izin kamera ditolak"* | Browser memblokir kamera | Klik ikon 🔒 di address bar → Kamera: **Izinkan** → coba lagi. Tutup Zoom/Meet yang sedang memakai webcam |
+| Toko online: "Toko sedang tutup" | Toko belum dibuka di aplikasi | Pemilik → Dashboard → Buka Toko, atau aktifkan *Terima pesanan saat toko tutup* |
+| Pesanan online tidak berbunyi | Aplikasi kasir belum disentuh sejak dibuka / volume mati | Ketuk layar sekali setelah membuka aplikasi; naikkan volume. Badge & daftar pesanan tetap diperbarui |
+| Toko online: "Toko online sedang tidak aktif" | Saklar Jual Online mati / belum disimpan | Lainnya → Jual Online → nyalakan → Simpan |
+| Barcode cetakan sulit discan | Dicetak dengan skala "Sesuaikan halaman" / tinta tipis | Cetak ulang dengan Skala 100%, kualitas Normal/Tinggi; dekatkan kamera ±10–15 cm, nyalakan senter bila redup |
 | Tidak ada bunyi saat scan | Volume HP/laptop mati atau mode senyap | Naikkan volume media. Getar & animasi hijau tetap muncul sebagai tanda |
 | Tombol **Salin** gambar poster gagal | Browser lama / bukan Chrome | Pakai Chrome atau Edge terbaru, atau tekan tombol ⬇ Unduh di sebelahnya |
 | Gambar/PDF gagal dibuat saat offline | Modul ekspor belum pernah dimuat | Simpan gambar/PDF sekali saat online; setelah itu bisa dipakai offline |
@@ -237,26 +241,46 @@ Tanda berhasil: muncul `Writing objects: 100%` dan `* [new branch] main -> main`
 
 ---
 
-## BAGIAN G — Update dari v1.0 ke v1.1
+## BAGIAN G — Cara update versi
 
 Data Anda (produk, transaksi, pengaturan) **tidak berubah** — cukup ganti kodenya.
 
 **1. Backend:**
-1. Buka proyek Apps Script → file **Kode** → hapus semua isinya → tempel **`Kode.gs` v1.1** → **Ctrl+S**.
+1. Buka proyek Apps Script → file **Kode** → hapus semua isinya → tempel **`Kode.gs` versi terbaru** → **Ctrl+S**.
 2. **Deploy → Manage deployments** → ✏️ → **Version: New version** → **Deploy**. URL `/exec` tetap sama.
 3. ⚠️ **Jangan** menjalankan `setupAppEnvironment` lagi.
 
 **2. Frontend:**
-1. Ekstrak `qasir.zip` v1.1 ke folder baru.
+1. Ekstrak `qasir.zip` versi terbaru ke folder baru.
 2. **Salin `js/config.js` lama Anda** (yang sudah berisi URL `/exec`) dan timpa `js/config.js` di folder baru — atau isi ulang `GAS_URL`.
 3. Salin **seluruh isi** folder baru ke folder `qasir` lama Anda (timpa semua file). Pastikan folder `.git` di folder lama tidak ikut terhapus.
 4. Dari folder `qasir`:
    ```bash
    git add .
-   git commit -m "Update Qasir v1.1"
+   git commit -m "Update Qasir v1.3"
    git push
    ```
-5. Tunggu 1–2 menit. Di HP/laptop kasir, tutup aplikasi lalu buka lagi — versi baru otomatis terpasang (versi sudah dinaikkan ke `qasir-v1.1.0` di `sw.js`).
+5. Tunggu 1–2 menit. Di HP/laptop kasir, tutup aplikasi lalu buka lagi — versi baru otomatis terpasang (versi sudah dinaikkan ke `qasir-v1.3.0` di `sw.js`).
+
+> ⚠️ **Update ke v1.3 wajib mengganti `Kode.gs` juga** (ada fitur server baru untuk Jual Online). Setelah *New version* di-deploy, permintaan pertama otomatis menambah sheet **PesananOnline**, kolom **kanal** di sheet Promo, dan folder Drive **Toko Online** — data lama tidak berubah. Jangan jalankan `setupAppEnvironment` lagi.
+
+**Yang baru di v1.3 — Jual Online:**
+- Toko online untuk pelanggan di alamat `https://USERNAME.github.io/qasir/toko.html` (tanpa login, satu situs dengan aplikasi kasir).
+- Pelanggan bisa **Ambil di toko**, **Diantar** (ongkir gratis / tarif tetap / konfirmasi WA), atau **Makan di tempat** lewat **QR meja**.
+- Bayar **di kasir/saat diterima** atau **Transfer/QRIS + unggah bukti**.
+- Pesanan masuk ke menu **Pesanan Online** di Qasir dengan bunyi "ting-tung", badge jumlah, lalu kasir **Terima → Selesai & Dibayar** (atau Tolak/Batalkan). Stok berkurang saat **Terima**; batal → stok kembali.
+- Admin mengatur tampilan: banner, pengumuman, urutan kategori & produk, sembunyikan produk, Best Seller, label "Baru"/info varian baru, dan promo khusus online.
+- Detail lengkap: [Bagian H — Jual Online](#bagian-h--jual-online).
+
+**Yang baru di v1.2:**
+- **Barcode cetak A4/thermal lebih mudah discan:** lebar garis dipatok pas dengan titik printer (tidak lagi ditarik memenuhi label), kode lebih pendek ±15–30% (angka dipadatkan), ruang kosong kiri-kanan cukup, garis lebih tinggi bila nama/harga disembunyikan. Pemindai kamera memakai resolusi lebih tinggi, fokus otomatis, dan tombol senter (jika HP mendukung).
+- **Bunyi scan satu kali "beep"** seperti scanner minimarket; gagal = satu dengung rendah.
+- **Prompt Menu AI** (menu Lainnya → Prompt Menu AI, atau tombol *Prompt AI* di Daftar Menu): prompt desain daftar menu lengkap dengan kategori & harga, foto produk bernomor (Foto 1, 2, 3…) yang bisa disalin/diunduh, 5 gaya, 2 tata letak, 6 ukuran, ID/EN.
+- **Penjelasan Estimasi Penjualan bisa disembunyikan** (diingat di perangkat).
+- Tulisan aplikasi kini cukup **"Qasir"**.
+- **Tampilan kasir Ringkas (tanpa gambar) jadi bawaan** — tombol 🖼 di samping Scan untuk menampilkan foto; pilihan diingat per perangkat.
+
+> **Tips cetak label barcode:** di jendela cetak pilih **Skala 100% / Ukuran sebenarnya** (jangan "Sesuaikan halaman"/"Fit to page"), Margin **Tidak ada**, kualitas **Normal/Tinggi**. Barcode lama yang sudah tercetak tetap terbaca — isinya sama, hanya bentuk garisnya yang diperbaiki.
 
 **Yang baru di v1.1:**
 - Scan barcode berbunyi "bip" + getar + animasi hijau (berhasil) / merah (tidak terdaftar), plus keterangan produk & isi keranjang. Alat scan USB/Bluetooth juga didukung lewat kolom cari.
@@ -268,3 +292,35 @@ Data Anda (produk, transaksi, pengaturan) **tidak berubah** — cukup ganti kode
 - Form produk: margin berubah langsung saat harga diketik.
 - Estimasi Penjualan: penjelasan lengkap, mode isi **per hari**, hitungan langsung, dan **Isi dari penjualan nyata**.
 - Kamera di laptop membuka **webcam** (bukan file manager); di HP tetap kamera HP.
+
+---
+
+## BAGIAN H — Jual Online
+
+### H1. Mengaktifkan toko online
+1. Login sebagai **Pemilik** → **Lainnya → Jual Online** (atau menu samping *Promosi → Jual Online*).
+2. Nyalakan saklar **Jual Online**, lalu atur bagian-bagian berikut (ketuk judul untuk membuka):
+   - **Banner & pengumuman** — unggah gambar banner (otomatis dipotong 2:1), judul, keterangan, dan bisa ditautkan ke produk. Pengumuman tampil di bagian atas (mis. *"Varian baru Matcha Latte sudah tersedia!"*).
+   - **Urutan menu & produk tampil** — tombol ▲▼ untuk mengatur urutan kategori dan produk; saklar untuk menyembunyikan produk dari toko online saja.
+   - **Best seller & label baru** — pilih produk unggulan (atau *Isi dari 5 terlaris 30 hari*), dan beri label **Baru / Varian baru: …** pada produk tertentu.
+   - **Diskon & promo online** — kelola di menu **Promo**; di form promo pilih **Berlaku di: Kasir & Online / Kasir saja / Online saja**. Diskon tampil otomatis sebagai harga coret & label di toko online.
+   - **Cara pesan & ongkir** — Ambil di toko, Diantar (ongkir), Makan di tempat (QR meja), minimal pesanan, jam buka, dan opsi *Terima pesanan saat toko tutup* (pre-order).
+   - **Pembayaran** — Bayar di tempat dan/atau Transfer/QRIS (unggah gambar QRIS & tulis info rekening).
+3. Tekan **Simpan Pengaturan Toko Online**. Tombol **Lihat Toko** membuka tampilan pelanggan.
+4. Tambahkan **deskripsi singkat** di form Produk agar tampil di toko online (opsional).
+
+### H2. Membagikan ke pelanggan
+- **Salin link** atau **Bagikan** ke WhatsApp/status/Instagram.
+- **QR Toko** → unduh PNG untuk ditempel di etalase/kasir/brosur.
+- **QR Meja** → cetak A4 berisi QR "MEJA 1, 2, 3…" (jumlah meja diatur di *Cara pesan*). Saat discan, nomor meja otomatis terisi dan pelanggan langsung memesan *makan di tempat*.
+
+### H3. Alur pesanan di kasir
+1. Pesanan baru muncul di tab **Pesanan** (bunyi "ting-tung" + badge merah). Toko harus **dibuka** agar pesanan bisa diterima.
+2. **Terima** → transaksi otomatis tercatat (nomor nota = kode pesanan, contoh `ON-1018-001`) dan **stok berkurang**. Atau **Tolak** dengan alasan (pelanggan langsung melihat alasannya).
+3. Siapkan pesanan → **Selesai & Dibayar** → pilih metode yang benar-benar dipakai (Tunai/QRIS/Transfer) agar laporan kas & tutup toko akurat.
+4. **Batal** (setelah diterima) → transaksi dibatalkan & stok dikembalikan.
+5. **Cetak** struk, **Chat** pelanggan via WhatsApp, dan **Lihat bukti bayar** untuk pesanan transfer.
+
+Pelanggan melihat status pesanannya otomatis (Menunggu konfirmasi → Diterima → Selesai / Ditolak) dan bisa membuka lagi lewat ikon 🧾 *Pesanan saya*.
+
+> **Catatan:** pesanan online butuh internet (di sisi pelanggan dan kasir). Notifikasi pesanan baru dicek ±15 detik sekali selama aplikasi kasir terbuka. Penjualan online masuk ke laporan, dashboard, dan laporan tutup toko seperti transaksi biasa (sumber: ONLINE). Ongkos kirim tercatat sebagai baris "Ongkos kirim".

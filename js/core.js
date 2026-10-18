@@ -393,20 +393,22 @@ const Sync = {
   _hb: 0,
   async heartbeat(force) {
     if (!navigator.onLine || !App.session || !Auth.tokenValid()) return;
-    if (!force && Date.now() - this._hb < 45000) return;
+    const gap = typeof onlineOn === 'function' && onlineOn() ? 14000 : 45000;   // toko online aktif → cek pesanan lebih sering
+    if (!force && Date.now() - this._hb < gap) return;
     this._hb = Date.now();
     const r = await api('heartbeat', { pending: App.sync.pending, oldest: App.sync.oldest }, { tries: 1 });
     if (r.ok) {
       const storeNow = r.data.store; const was = App.store;
       if (App.boot && JSON.stringify(storeNow || null) !== JSON.stringify(was || null)) { App.boot.store = storeNow; Boot.persist(); emit('store'); }
       if (r.data.ver && r.data.ver !== App.ver) Boot.refresh();
+      if (window.Orders) Orders.onBeat(r.data);
     }
   },
   start() {
     addEventListener('online', () => { this.setState('idle'); warmUpServer(); this.soon(800); });
     addEventListener('offline', () => this.setState('offline'));
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { this.soon(500); this.heartbeat(); } });
-    setInterval(() => { if (App.sync.pending) this.run(); else this.heartbeat(); }, 20000);
+    setInterval(() => { if (App.sync.pending) this.run(); else this.heartbeat(); }, 10000);
     setInterval(checkWarnings, 60000);
     this.refreshCount().then(() => this.soon(1200));
   }
