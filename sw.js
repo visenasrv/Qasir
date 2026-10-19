@@ -1,11 +1,11 @@
 /* QASIR — Service Worker: app shell cache-first → aplikasi terbuka instan & tetap jalan offline.
    Naikkan VERSION setiap kali Anda mengubah file frontend agar perangkat mengambil versi baru. */
-const VERSION = 'qasir-v1.3.4';
+const VERSION = 'qasir-v1.4.0';
 const SHELL = [
-  './', 'index.html', 'manifest.webmanifest', 'css/style.css?v=1.3.4',
-  'js/config.js?v=1.3.4', 'js/icons.js?v=1.3.4', 'js/core.js?v=1.3.4', 'js/export.js?v=1.3.4', 'js/hpp.js?v=1.3.4', 'js/barcode.js?v=1.3.4',
-  'js/printer.js?v=1.3.4', 'js/p-kasir.js?v=1.3.4', 'js/p-ops.js?v=1.3.4', 'js/p-owner.js?v=1.3.4', 'js/p-promo.js?v=1.3.4', 'js/p-online.js?v=1.3.4', 'js/app.js?v=1.3.4',
-  'toko.html', 'css/toko.css?v=1.3.4', 'js/toko.js?v=1.3.4', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'
+  './', 'index.html', 'manifest.webmanifest', 'css/style.css?v=1.4.0',
+  'js/config.js?v=1.4.0', 'js/tenant.js?v=1.4.0', 'js/icons.js?v=1.4.0', 'js/core.js?v=1.4.0', 'js/export.js?v=1.4.0', 'js/hpp.js?v=1.4.0', 'js/barcode.js?v=1.4.0',
+  'js/printer.js?v=1.4.0', 'js/p-kasir.js?v=1.4.0', 'js/p-ops.js?v=1.4.0', 'js/p-owner.js?v=1.4.0', 'js/p-promo.js?v=1.4.0', 'js/p-online.js?v=1.4.0', 'js/app.js?v=1.4.0',
+  'toko.html', 'css/toko.css?v=1.4.0', 'js/toko.js?v=1.4.0', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
 const RUNTIME = VERSION + '-rt';
 
@@ -20,10 +20,16 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;                                   // POST ke GAS tidak pernah di-cache
   const url = new URL(req.url);
   if (/script\.google(usercontent)?\.com$/.test(url.hostname)) return; // API selalu langsung ke server
+  // Daftar Kode Toko → selalu ambil terbaru (cadangan: salinan terakhir saat offline)
+  if (url.origin === location.origin && /\/toko\.json$/.test(url.pathname)) {
+    e.respondWith(fetch(req).then((res) => { if (res.ok) { const cp = res.clone(); caches.open(RUNTIME).then((c) => c.put('toko.json', cp)); } return res; }).catch(() => caches.open(RUNTIME).then((c) => c.match('toko.json'))));
+    return;
+  }
   // Navigasi halaman → index.html dari cache (SPA)
   if (req.mode === 'navigate') {
-    // toko.html (toko online pelanggan) & index.html (aplikasi kasir) disajikan masing-masing
-    const page = /\/toko\.html$/.test(url.pathname) ? 'toko.html' : 'index.html';
+    // toko.html (toko online pelanggan) & index.html (aplikasi kasir) disajikan masing-masing; halaman lain (kelola.html) langsung dari jaringan
+    const page = /\/toko\.html$/.test(url.pathname) ? 'toko.html' : /\/(index\.html)?$/.test(url.pathname) ? 'index.html' : '';
+    if (!page) return;
     e.respondWith(caches.open(VERSION).then((c) => c.match(page).then((hit) => {
       const net = fetch(req).then((res) => { if (res.ok) c.put(page, res.clone()); return res; }).catch(() => hit);
       return hit || net;                                        // instan dari cache, diperbarui di latar

@@ -589,3 +589,12 @@ body.dnd-on, body.dnd-on * { -webkit-user-select: none; user-select: none; curso
 .scan-result { flex-wrap: wrap; }
 .scan-result > div:not(.scan-line) { flex: 1 1 0; min-width: 0; }
 .scan-result .scan-line { flex: 1 1 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 13.5px; }
+
+/* ---------- v1.4.0 · Kode Toko & paket ---------- */
+.tenant-line { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; font-size: 13px; color: var(--muted); }
+.tenant-line b { color: var(--text); letter-spacing: .02em; }
+.kode-input { text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+.lock-tag { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; background: var(--warn-soft); color: var(--warn); margin-left: auto; flex: none; }
+.menu-tile .lock-tag { position: absolute; top: 8px; right: 8px; margin: 0; }
+.menu-tile.locked { color: var(--muted); }
+.upsell-list { display: grid; gap: 14px; margin: 18px 0 18px; padding: 16px; border-radius: 14px; background: var(--bg, #F7F7F8); }

@@ -418,7 +418,8 @@ page('akun', {
         '<div class="grid-3" style="margin-top:12px;gap:8px"><button class="btn outline sm" data-act="pconnect" type="button">' + (sv ? 'Ganti' : 'Hubungkan') + '</button><button class="btn outline sm" data-act="ptest" type="button"' + (sv ? '' : ' disabled') + '>Uji cetak</button><button class="btn outline sm" data-act="pforget" type="button"' + (sv ? '' : ' disabled') + '>Lupakan</button></div>'
         : '<div class="banner info">' + icon('info', 'sm') + '<div>Browser ini tidak mendukung Bluetooth (mis. Safari iPhone). Struk bisa disimpan sebagai gambar atau dikirim lewat WhatsApp.</div></div>') + '</div>' +
       '<div class="label-row"><span class="sec-title">Aplikasi</span></div><div class="card pad">' +
-      '<div class="sum-row"><span class="muted">Versi</span><b>' + esc(CFG.APP_VERSION || '1.0.0') + '</b></div>' +
+      '<div class="sum-row"><span class="muted">Versi</span><b>' + esc(APP_VER) + '</b></div>' +
+      (Tenant.multi && Tenant.current ? '<div class="sum-row"><span class="muted">Kode Toko</span><b class="mono">' + esc(Tenant.current.kode) + '</b></div><div class="sum-row"><span class="muted">Paket</span><b>' + esc(Tenant.paketLabel) + '</b></div>' : '') +
       '<div class="sum-row"><span class="muted">Sesi berakhir</span><b>' + fmtDT(App.session.uiExp) + '</b></div>' +
       '<div class="help">' + icon('info', 'xs') + 'Pasang Qasir ke layar utama (menu browser → "Tambahkan ke layar utama") agar data offline tidak terhapus otomatis.</div>' +
       '<button class="btn outline block sm" data-act="perf" type="button" style="margin-top:10px">' + icon('zap', 'sm') + 'Lihat kecepatan server</button></div>' +
@@ -460,6 +461,12 @@ const OWNER_MENU = [
 ];
 page('lainnya', {
   role: 'OWNER',
-  template() { return topbar({ title: 'Lainnya', sub: 'Semua menu pemilik toko', right: syncPill() }) + '<div class="wrap" style="padding-top:16px"><div class="menu-grid">' + OWNER_MENU.map((m) => '<a class="menu-tile" href="#/' + m[0] + '"><span class="ico-box">' + icon(m[2]) + '</span>' + m[1] + '</a>').join('') + '</div></div>'; },
+  template() {
+    const locked = !Tenant.has('online');
+    const tiles = OWNER_MENU.filter((m) => !(locked && m[0] === 'pesanan')).map((m) => m[0] === 'online' && locked
+      ? '<a class="menu-tile locked" href="#/paket"><span class="ico-box">' + icon(m[2]) + '</span>' + m[1] + '<span class="lock-tag">' + icon('lock', 'xs') + '</span></a>'
+      : '<a class="menu-tile" href="#/' + m[0] + '"><span class="ico-box">' + icon(m[2]) + '</span>' + m[1] + '</a>');
+    return topbar({ title: 'Lainnya', sub: 'Semua menu pemilik toko', right: syncPill() }) + '<div class="wrap" style="padding-top:16px"><div class="menu-grid">' + tiles.join('') + '</div></div>';
+  },
   show() {}
 });

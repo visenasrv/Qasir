@@ -4,7 +4,8 @@
    ========================================================================== */
 'use strict';
 (function () {
-  const CFG = window.QASIR_CONFIG || {}, GAS_URL = CFG.GAS_URL || '';
+  const CFG = window.QASIR_CONFIG || {};
+  let GAS_URL = '', NS = '';                              // diisi dari Kode Toko (tenant.js) saat start
   const NF = new Intl.NumberFormat('id-ID');
   const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const esc = (s) => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -13,8 +14,8 @@
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'x' + Math.random().toString(36).slice(2) + Date.now().toString(36));
   const LS = {
-    get(k, d) { try { const v = localStorage.getItem('qshop:' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
-    set(k, v) { try { localStorage.setItem('qshop:' + k, JSON.stringify(v)); } catch (e) {} }
+    get(k, d) { try { const v = localStorage.getItem('qshop:' + (k === 'form' ? '' : NS) + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('qshop:' + (k === 'form' ? '' : NS) + k, JSON.stringify(v)); } catch (e) {} }
   };
   const params = new URLSearchParams(location.search);
   const MEJA = (params.get('meja') || '').replace(/[^\w-]/g, '').slice(0, 10);
@@ -444,7 +445,9 @@
     }
     const pm = P(); cart = cart.filter((l) => pm[l.produk_id]); LS.set('cart', cart); renderCartBar();
   }
+  let closed = false;
   async function load(force) {
+    if (closed || !GAS_URL) return;
     if (loading) return loading;
     loading = (async () => {
       let stale = false; try { stale = !!localStorage.getItem('qshop:stale'); } catch (e) {}
@@ -475,6 +478,26 @@
   addEventListener('storage', (e) => { if (e.key === 'qshop:ping') load(true); });
   try { if ('BroadcastChannel' in window) new BroadcastChannel('qasir-shop').onmessage = () => load(true); } catch (e) {}
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheets.length) sheets[sheets.length - 1].close(); });
-  const start = () => { load(); schedule(); };
+  function offScreen(title, msg, ico) {
+    $('#shop').innerHTML = '<div class="shop-off">' + icon(ico || 'store', 'lg') + '<h2>' + esc(title) + '</h2><p class="muted">' + esc(msg) + '</p></div>';
+  }
+  function gate(t) {
+    if (!t.aktif) { offScreen('Toko sedang tidak tersedia', 'Pemesanan online untuk toko ini sedang tidak aktif. Silakan hubungi toko secara langsung.'); return false; }
+    if (t.paket !== 'online' && !t.legacy) { offScreen('Toko online belum tersedia', 'Toko ini belum membuka pemesanan online. Silakan pesan langsung di kasir.'); return false; }
+    return true;
+  }
+  const start = async () => {
+    const T = window.QasirTenant;
+    const r = T ? await T.shop((n, old) => {
+      if (n.url !== old.url) { location.reload(); return; }
+      if (!gate(n)) { closed = true; clearTimeout(pollT); sheets.slice().forEach((x) => x.close()); }
+      else if (old.paket !== 'online' || !old.aktif) location.reload();
+    }) : { ok: !!CFG.GAS_URL, t: { url: CFG.GAS_URL, ns: '', paket: 'online', aktif: true, legacy: true }, error: 'Alamat server belum diatur.' };
+    if (!r.ok) { offScreen(r.code === 'NET' ? 'Gagal memuat toko' : 'Toko tidak ditemukan', r.error, r.code === 'NET' ? 'wifi-off' : 'alert'); return; }
+    GAS_URL = r.t.url; NS = r.t.ns || '';
+    if (!gate(r.t)) { closed = true; return; }
+    cart = LS.get('cart', []);
+    load(); schedule();
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

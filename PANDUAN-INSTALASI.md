@@ -1,4 +1,4 @@
-# 📋 Panduan Instalasi — Qasir v1.3.4
+# 📋 Panduan Instalasi — Qasir v1.4.0
 
 Qasir terdiri dari dua bagian:
 
@@ -12,6 +12,8 @@ Urutan wajib: **Backend dulu → dapat URL `/exec` → isi ke frontend → uploa
 Waktu yang dibutuhkan: ± 30–45 menit untuk pertama kali.
 
 > **Sudah memasang versi sebelumnya?** Langsung ke [Bagian G — Cara update versi](#bagian-g--cara-update-versi).
+>
+> **Menjual Qasir ke banyak klien?** Sejak v1.4.0 satu situs dipakai semua klien lewat **Kode Toko** — lihat [Bagian I](#bagian-i--kode-toko-satu-situs-untuk-banyak-klien).
 
 ---
 
@@ -84,6 +86,8 @@ Waktu yang dibutuhkan: ± 30–45 menit untuk pertama kali.
    GAS_URL: 'https://script.google.com/macros/s/GANTI_DENGAN_ID_DEPLOYMENT/exec',
    ```
    dengan URL `/exec` dari langkah A4 (tetap di dalam tanda kutip). Simpan.
+
+   > Sejak v1.4.0 langkah ini **opsional**. Alamat server tiap toko didaftarkan lewat **Kode Toko** (Bagian I). Isi `GAS_URL` hanya bila HP Anda sudah memakai Qasir sebelum v1.4.0, supaya data lama di HP tetap terbaca.
 
 ---
 
@@ -266,6 +270,15 @@ Data Anda (produk, transaksi, pengaturan) **tidak berubah** — cukup ganti kode
 
 > 🔁 **Sudah memasang v1.3? Update ke v1.3.1:** ganti isi folder repo dengan isi ZIP baru (tetap pakai `js/config.js` lama), lalu `git add . && git commit -m "Update Qasir v1.3.4" && git push`. Ganti juga `Kode.gs` → *Deploy → Manage deployments → ✏️ → Version: New version → Deploy* agar pengecekan status toko lebih hemat kuota (tanpa ini pun tetap berjalan, hanya lebih boros).
 
+> 🔁 **Update ke v1.4.0 (Kode Toko):** `Kode.gs` **tidak berubah** (tetap v1.3.2). Ganti isi folder repo dengan isi ZIP baru, **tetap pakai `js/config.js` lama** (alamat lama di dalamnya membuat data lama di HP tetap terbaca), lalu commit & push. Setelah itu daftarkan toko Anda sendiri lewat `kelola.html` (Bagian I). Sampai toko terdaftar, aplikasi akan meminta Kode Toko.
+
+**Yang baru di v1.4.0 — Kode Toko (satu situs untuk banyak klien):**
+- Perangkat baru menampilkan layar **Masukkan Kode Toko**. Setelah diisi sekali, aplikasi langsung tersambung ke server toko itu.
+- **Paket Kasir** dan **Paket Kasir + Jual Online**: menu Jual Online, QR meja, dan Pesanan Online terkunci di Paket Kasir. Ada halaman upgrade dengan tombol WhatsApp ke admin.
+- Halaman **`kelola.html`** untuk penjual: buat/ubah/nonaktifkan Kode Toko, cek server klien, tautan & QR aplikasi untuk klien.
+- Satu HP bisa dipakai beberapa toko (tombol **Ganti toko** di layar masuk). Data tiap toko disimpan terpisah.
+- Tautan toko online & QR meja otomatis membawa Kode Toko (`toko.html?k=KODE&meja=5`).
+
 **Yang baru di v1.3.4 — Jumlah per scan:**
 - Saat kamera scan terbuka ada isian **Jumlah per scan** (tombol − / +, ketik angka, atau pilih cepat 2× 3× 5× 10×). Pilih 3 lalu scan sekali → barang masuk **3 sekaligus**. Setelah scan, jumlah kembali ke 1.
 - Di kotak hasil scan ada pengatur **Jumlah di keranjang** (− / +) untuk mengoreksi jumlah barang yang barusan discan tanpa menutup kamera.
@@ -350,3 +363,29 @@ Data Anda (produk, transaksi, pengaturan) **tidak berubah** — cukup ganti kode
 Pelanggan melihat status pesanannya otomatis (Menunggu konfirmasi → Diterima → Selesai / Ditolak) dan bisa membuka lagi lewat ikon 🧾 *Pesanan saya*.
 
 > **Catatan:** pesanan online butuh internet (di sisi pelanggan dan kasir). Notifikasi pesanan baru dicek ±15 detik sekali selama aplikasi kasir terbuka. Halaman toko pelanggan memeriksa status toko ±10 detik sekali selama dibuka (±45 detik bila tidak disentuh 10 menit) dan langsung memeriksa saat halaman dibuka kembali. Penjualan online masuk ke laporan, dashboard, dan laporan tutup toko seperti transaksi biasa (sumber: ONLINE). Ongkos kirim tercatat sebagai baris "Ongkos kirim".
+
+
+---
+
+## BAGIAN I — Kode Toko (satu situs untuk banyak klien)
+
+Semua klien membuka **alamat situs yang sama**. Kode Toko menentukan server (Apps Script + Google Sheet) dan paket tiap klien. Daftar Kode Toko ada di file **`toko.json`** di repo, isinya terenkripsi.
+
+### I1. Mendaftarkan toko
+1. Pasang backend klien seperti Bagian A (di akun Google klien) → dapat URL `/exec`.
+2. Buka **`https://qasir-visena.vercel.app/kelola.html`**.
+3. Isi **Nama usaha**, klik **Buat otomatis** untuk Kode Toko (atau ketik sendiri), tempel **URL /exec** → **Cek server** → pilih **Paket** → **Simpan ke daftar**.
+4. Klik **Salin isi toko.json** → **Buka toko.json di GitHub** → hapus isi lama → tempel → **Commit changes**.
+5. Tunggu ±1 menit (Vercel memperbarui situs) → klik **Uji Kode Toko di situs**.
+6. Berikan ke klien: **Salin pesan untuk klien** (berisi Kode Toko + tautan) dan **QR aplikasi**.
+
+### I2. Mengubah paket / menonaktifkan
+- Di `kelola.html`: ketik Kode Toko → **Cari** → ubah Paket atau Status → **Simpan ke daftar** → salin & commit `toko.json` seperti langkah I1.4.
+- HP klien menyesuaikan sendiri saat aplikasi dibuka berikutnya (dicek otomatis di latar).
+- Untuk mengunci aplikasi klien, pilih **Nonaktif**, jangan **Hapus**. Kode yang dihapus tetap berjalan di HP yang sudah memakainya (sengaja, agar salah ketik `toko.json` tidak mematikan toko klien).
+
+### I3. Penting
+- **Jangan mengetik `toko.json` manual.** Selalu lewat `kelola.html`. Bila `toko.json` rusak, HP yang sudah terhubung tetap jalan dari salinannya, tetapi HP baru tidak bisa masuk sampai diperbaiki.
+- Simpan daftar klien Anda sendiri (Kode Toko, nama, paket, URL `/exec`). Isi `toko.json` tidak bisa dibaca tanpa Kode Toko.
+- Kode Toko bukan kata sandi. Keamanan tetap dari username + PIN (terkunci 5 menit setelah 5× salah).
+- Mengganti alamat situs (pindah hosting/domain) berarti klien harus membuka alamat baru dan QR toko/meja dicetak ulang. Tentukan alamat final sebelum klien mencetak QR.

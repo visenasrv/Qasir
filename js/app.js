@@ -15,7 +15,7 @@ const SIDE_OWNER = [
 ];
 /** Halaman turunan → tab induk di bottom nav. */
 const NAV_PARENT = { bayar: 'kasir', sukses: 'kasir', 'produk-form': 'produk' };
-const OWNER_SUB = ['online', 'menu-ai', 'produk', 'hpp', 'bahan', 'promo', 'laporan', 'menu', 'poster', 'label', 'karyawan', 'pengaturan', 'tinjau', 'utang', 'akun', 'produk-form'];
+const OWNER_SUB = ['online', 'paket', 'menu-ai', 'produk', 'hpp', 'bahan', 'promo', 'laporan', 'menu', 'poster', 'label', 'karyawan', 'pengaturan', 'tinjau', 'utang', 'akun', 'produk-form'];
 
 const Nav = {
   update(name) {
@@ -43,7 +43,9 @@ const Shell = {
     const navs = (owner ? NAV_OWNER : NAV_KASIR).slice(); if (ol) navs.splice(1, 0, ['pesanan', 'Pesanan', 'inbox', false, true]);
     bn.classList.toggle('six', navs.length > 5);
     bn.innerHTML = navs.map((n) => '<a href="#/' + n[0] + '" data-tab="' + n[0] + '">' + icon(n[2]) + '<span>' + n[1] + '</span>' + (n[3] ? badge : '') + (n[4] ? obadge : '') + '</a>').join('');
-    const link = (n) => n[0] === 'pesanan' && !ol ? '' : '<a href="#/' + n[0] + '" data-tab="' + n[0] + '">' + icon(n[2], 'sm') + n[1] + (n[0] === 'pesanan' ? obadge : '') + '</a>';
+    const locked = !Tenant.has('online');
+    const link = (n) => n[0] === 'pesanan' && !ol ? '' : n[0] === 'online' && locked ? '<a href="#/paket" data-tab="paket">' + icon(n[2], 'sm') + n[1] + '<span class="lock-tag">' + icon('lock', 'xs') + '</span></a>'
+      : '<a href="#/' + n[0] + '" data-tab="' + n[0] + '">' + icon(n[2], 'sm') + n[1] + (n[0] === 'pesanan' ? obadge : '') + '</a>';
     const kasirSide = NAV_KASIR.slice(0, 4); if (ol) kasirSide.splice(1, 0, ['pesanan', 'Pesanan Online', 'inbox']);
     side.innerHTML = '<div class="brand">' + logoHtml() + '<div class="grow" style="min-width:0"><div class="t ellipsis">' + esc(st.nama_toko || 'Qasir') + '</div><div class="s">' + (owner ? 'Pemilik' : 'Kasir') + (App.session.device && App.session.device.kode ? ' · ' + esc(App.session.device.kode) : '') + '</div></div></div>' +
       (owner ? SIDE_OWNER.map((g) => '<div class="grp">' + g[0] + '</div>' + g[1].map(link).join('')).join('') : kasirSide.map(link).join('')) +
@@ -79,6 +81,11 @@ const Shell = {
     if (!h || h === 'login' || !Pages[h.split('/')[0]]) replaceRoute(homePage()); else route();
     // Segarkan data & status toko di latar — UI sudah tampil.
     setTimeout(() => { Boot.refresh(); Sync.heartbeat(true); }, 250);
+    // Kode Toko: cek paket/status di latar (toko.json). Berubah → muat ulang sekali.
+    if (Tenant.multi && Tenant.refresh) setTimeout(() => Tenant.refresh().then((r) => {
+      if (r && r.reload) { toast(r.t.aktif ? 'Paket toko diperbarui. Memuat ulang…' : 'Status toko berubah. Memuat ulang…', 'info', 2500); setTimeout(() => location.reload(), 1600); }
+      else if (r && r.ok) this.renderNav();
+    }).catch(() => {}), 1500);
     checkWarnings();
     prewarmPages();
     if (onlineOn()) setTimeout(() => Orders.load(true), 600);
@@ -117,6 +124,7 @@ function prewarmPages() {
 function init() {
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
   const brand = Store.get('brand', null); if (brand) applyTheme(brand);
+  if (Tenant.multi && (Tenant.need || Tenant.blocked)) { KodeGate.mount(); return; }   // belum pilih toko / toko dinonaktifkan
   const s = Auth.load();
   if (s && !s.expired) {
     App.session = s;

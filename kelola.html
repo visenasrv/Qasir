@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Kelola Kode Toko · Qasir</title>
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+  <style>
+    :root { --p: #F26B1D; --p-dark: #C2520F; --p-soft: #FFF1E8; --text: #1C1917; --muted: #6B6461; --line: #E7E2DE; --bg: #F7F5F3; --card: #fff;
+      --ok: #15803D; --ok-soft: #E8F6EC; --bad: #B91C1C; --bad-soft: #FDECEC; --warn: #A16207; --warn-soft: #FEF6E0; --mono: 'JetBrains Mono', ui-monospace, monospace; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+    header { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; }
+    .logo { width: 44px; height: 44px; border-radius: 13px; background: var(--p); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 20px; flex: none; }
+    h1 { font-size: 21px; margin: 0; } h2 { font-size: 16.5px; margin: 0 0 4px; }
+    .muted { color: var(--muted); } .small { font-size: 13px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; margin-top: 16px; }
+    .step { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; background: var(--p-soft); color: var(--p-dark); font-weight: 800; font-size: 13px; margin-right: 8px; }
+    label.f { display: block; margin-top: 14px; } .lbl { display: block; font-size: 12.5px; font-weight: 700; letter-spacing: .03em; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; }
+    input[type=text], input[type=url], textarea { width: 100%; font: inherit; padding: 11px 12px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; color: var(--text); }
+    input:focus, textarea:focus { outline: none; border-color: var(--p); box-shadow: 0 0 0 3px var(--p-soft); }
+    .mono { font-family: var(--mono); } .kode { text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .row > .grow { flex: 1 1 220px; }
+    .btn { font: inherit; font-weight: 700; font-size: 14px; border-radius: 12px; padding: 10px 14px; border: 1.5px solid var(--line); background: #fff; color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+    .btn:hover { border-color: #cfc7c1; } .btn:disabled { opacity: .55; cursor: wait; }
+    .btn.primary { background: var(--p); border-color: var(--p); color: #fff; } .btn.primary:hover { background: var(--p-dark); }
+    .btn.danger { color: var(--bad); } .btn.green { background: #16A34A; border-color: #16A34A; color: #fff; }
+    .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .opt { border: 1.5px solid var(--line); border-radius: 14px; padding: 12px; cursor: pointer; display: block; }
+    .opt input { margin-right: 6px; accent-color: var(--p); } .opt:has(input:checked) { border-color: var(--p); background: var(--p-soft); }
+    .opt b { font-size: 14.5px; } .opt .small { display: block; margin-top: 4px; }
+    .msg { margin-top: 10px; padding: 10px 12px; border-radius: 12px; font-size: 14px; display: none; } .msg.show { display: block; }
+    .msg.ok { background: var(--ok-soft); color: var(--ok); } .msg.bad { background: var(--bad-soft); color: var(--bad); } .msg.info { background: var(--p-soft); color: var(--p-dark); } .msg.warn { background: var(--warn-soft); color: var(--warn); }
+    .stat { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: var(--bg); }
+    .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.ok { background: var(--ok-soft); color: var(--ok); }
+    textarea.out { font-family: var(--mono); font-size: 12px; min-height: 150px; background: #FBFAF9; }
+    .links { display: grid; grid-template-columns: 1fr 132px; gap: 14px; align-items: start; margin-top: 12px; }
+    .link-box { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; word-break: break-all; font-size: 13.5px; }
+    .link-box b { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+    #qr canvas, #qr img { width: 132px; height: 132px; border: 1px solid var(--line); border-radius: 12px; padding: 6px; background: #fff; }
+    ol { padding-left: 20px; margin: 8px 0 0; } ol li { margin: 4px 0; }
+    .hide { display: none !important; }
+    @media (max-width: 560px) { .opts { grid-template-columns: 1fr; } .links { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="logo">Q</div><div><h1>Kelola Kode Toko</h1><div class="muted small">Khusus admin / penjual Qasir</div></div></header>
+  <p class="muted small">Halaman ini tidak menyimpan apa pun ke server. Anda membuat atau mengubah entri di sini, lalu menempelkan hasilnya ke file <b>toko.json</b> di GitHub. Setelah Vercel selesai memperbarui situs (±1 menit), Kode Toko langsung bisa dipakai.</p>
+
+  <!-- 1. Daftar saat ini -->
+  <div class="card">
+    <div class="stat"><h2><span class="step">1</span>Daftar saat ini</h2><button class="btn" id="btnReload" type="button">Muat ulang</button></div>
+    <div class="muted small" id="regInfo">Memuat toko.json…</div>
+    <div class="msg warn" id="draftMsg"></div>
+  </div>
+
+  <!-- 2. Tambah / ubah -->
+  <div class="card">
+    <h2><span class="step">2</span>Tambah atau ubah toko</h2>
+    <div class="muted small">Isi data klien. Untuk mengubah toko yang sudah ada, ketik Kode Tokonya lalu klik <b>Cari</b>.</div>
+
+    <label class="f"><span class="lbl">Nama usaha klien</span><input type="text" id="fNama" maxlength="60" placeholder="contoh: Kedai Bu Sri"></label>
+
+    <label class="f"><span class="lbl">Kode Toko</span>
+      <div class="row"><input class="grow mono kode" type="text" id="fKode" maxlength="32" placeholder="contoh: KEDAIBUSRI-4821" autocapitalize="characters" spellcheck="false">
+        <button class="btn" id="btnGen" type="button">Buat otomatis</button><button class="btn" id="btnFind" type="button">Cari</button></div>
+      <span class="muted small">Huruf, angka, dan tanda "-". Tambahan 4 angka acak membuat kode sulit ditebak.</span></label>
+
+    <label class="f"><span class="lbl">Alamat server Apps Script (URL /exec)</span>
+      <div class="row"><input class="grow mono" type="url" id="fUrl" placeholder="https://script.google.com/macros/s/…/exec" spellcheck="false"><button class="btn" id="btnCheck" type="button">Cek server</button></div></label>
+    <div class="msg" id="checkMsg"></div>
+
+    <div class="f" style="margin-top:14px"><span class="lbl">Paket</span>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="paket" value="kasir"><b>Paket Kasir</b><span class="muted small">Kasir, scan barcode, stok, laporan, karyawan</span></label>
+        <label class="opt"><input type="radio" name="paket" value="online" checked><b>Paket Kasir + Jual Online</b><span class="muted small">Semua fitur kasir + toko online, QR meja, pesanan online</span></label>
+      </div></div>
+
+    <div class="f" style="margin-top:14px"><span class="lbl">Status</span>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="aktif" value="1" checked><b>Aktif</b><span class="muted small">Aplikasi bisa dipakai</span></label>
+        <label class="opt"><input type="radio" name="aktif" value="0"><b>Nonaktif</b><span class="muted small">Aplikasi & toko online klien terkunci</span></label>
+      </div></div>
+    <label class="f hide" id="pesanWrap"><span class="lbl">Pesan untuk klien saat nonaktif</span><input type="text" id="fPesan" maxlength="200" placeholder="contoh: Silakan hubungi admin Qasir."></label>
+
+    <div class="row" style="margin-top:18px"><button class="btn primary" id="btnSave" type="button">Simpan ke daftar</button><button class="btn danger" id="btnDel" type="button">Hapus dari daftar</button><button class="btn" id="btnClear" type="button">Kosongkan form</button></div>
+    <div class="msg" id="saveMsg"></div>
+
+    <div class="hide" id="linkCard">
+      <div class="links"><div>
+        <div class="link-box"><b>Aplikasi kasir (untuk pemilik & kasir)</b><span id="lApp"></span></div>
+        <div class="link-box" id="lShopWrap"><b>Toko online (untuk pelanggan)</b><span id="lShop"></span></div>
+        <div class="row"><button class="btn" id="btnCopyCard" type="button">Salin pesan untuk klien</button><button class="btn" id="btnQr" type="button">Unduh QR aplikasi</button></div>
+      </div><div id="qr"></div></div>
+    </div>
+  </div>
+
+  <!-- 3. Perbarui toko.json -->
+  <div class="card">
+    <div class="stat"><h2><span class="step">3</span>Perbarui toko.json di GitHub</h2><span class="pill" id="dirtyPill">Belum ada perubahan</span></div>
+    <ol class="small">
+      <li>Klik <b>Salin isi toko.json</b>.</li>
+      <li>Klik <b>Buka toko.json di GitHub</b> → hapus semua isi lama → tempel → <b>Commit changes</b>.</li>
+      <li>Tunggu ±1 menit, lalu klik <b>Uji Kode Toko di situs</b> untuk memastikan kode sudah aktif.</li>
+    </ol>
+    <div class="row" style="margin-top:12px"><button class="btn primary" id="btnCopy" type="button">Salin isi toko.json</button><a class="btn" id="btnGh" target="_blank" rel="noopener" href="#">Buka toko.json di GitHub ↗</a><button class="btn" id="btnDl" type="button">Unduh file</button><button class="btn" id="btnTest" type="button">Uji Kode Toko di situs</button></div>
+    <div class="msg" id="outMsg"></div>
+    <label class="f"><span class="lbl">Isi toko.json baru</span><textarea class="out" id="out" readonly spellcheck="false"></textarea></label>
+  </div>
+</div>
+
+<script src="js/config.js?v=1.4.0"></script>
+<script src="js/tenant.js?v=1.4.0" data-page="kelola"></script>
+<script>
+'use strict';
+(function () {
+  const T = window.QasirTenant, CFG = window.QASIR_CONFIG || {};
+  const $ = (id) => document.getElementById(id);
+  const DKEY = 'qasir:kelola:draft';
+  const BASE = new URL('./', location.href).href;
+  const REPO = CFG.REPO || 'visenasrv/Qasir';
+  let work = null, dirty = 0;
+
+  function msg(el, text, type) { el = $(el); el.className = 'msg show ' + (type || 'info'); el.innerHTML = text; }
+  function hide(el) { $(el).className = 'msg'; }
+  function busy(b, on) { $(b).disabled = !!on; }
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const count = () => Object.keys(work.toko).length;
+
+  function serialize() {
+    const ids = Object.keys(work.toko);
+    const lines = ids.map((id, i) => '    ' + JSON.stringify(id) + ': ' + JSON.stringify(work.toko[id]) + (i < ids.length - 1 ? ',' : ''));
+    return '{\n  "format": 1,\n  "catatan": ' + JSON.stringify(work.catatan || 'Daftar Kode Toko Qasir. Isinya terkunci - tambah/ubah lewat halaman kelola.html, jangan diketik manual.') +
+      ',\n  "diubah": ' + JSON.stringify(work.diubah || '') + ',\n  "toko": {\n' + lines.join('\n') + (lines.length ? '\n' : '') + '  }\n}\n';
+  }
+  function paintOut() {
+    $('out').value = serialize();
+    $('dirtyPill').textContent = dirty ? dirty + ' perubahan belum ditempel ke GitHub' : 'Belum ada perubahan';
+    $('dirtyPill').className = 'pill' + (dirty ? ' warn' : '');
+    try { if (dirty) localStorage.setItem(DKEY, JSON.stringify({ at: Date.now(), dirty, work })); else localStorage.removeItem(DKEY); } catch (e) {}
+  }
+  async function loadReg() {
+    $('regInfo').textContent = 'Memuat toko.json…';
+    try {
+      const reg = await T.registry(true);
+      work = { format: 1, catatan: reg.catatan, diubah: reg.diubah || '', toko: Object.assign({}, reg.toko) };
+      $('regInfo').innerHTML = '<b>' + count() + ' toko</b> terdaftar di situs ini' + (reg.diubah ? ' · terakhir diubah ' + esc(reg.diubah) : '') + '.';
+    } catch (e) {
+      work = { format: 1, diubah: '', toko: {} };
+      $('regInfo').innerHTML = '<span style="color:var(--bad)">toko.json belum ada atau tidak bisa dibaca (' + esc(e.message) + ').</span> Daftar baru akan dibuat dari nol.';
+    }
+    dirty = 0;
+    let d = null; try { d = JSON.parse(localStorage.getItem(DKEY) || 'null'); } catch (e) {}
+    if (d && d.work && JSON.stringify(d.work.toko) !== JSON.stringify(work.toko)) {
+      msg('draftMsg', 'Ada ' + d.dirty + ' perubahan dari ' + new Date(d.at).toLocaleString('id-ID') + ' yang belum terlihat di situs. <button class="btn" id="useDraft" type="button" style="margin-left:6px">Lanjutkan draf</button> <button class="btn" id="dropDraft" type="button">Buang</button>', 'warn');
+      $('useDraft').onclick = () => { work = d.work; dirty = d.dirty; hide('draftMsg'); paintOut(); };
+      $('dropDraft').onclick = () => { try { localStorage.removeItem(DKEY); } catch (e) {} hide('draftMsg'); };
+    } else { hide('draftMsg'); try { localStorage.removeItem(DKEY); } catch (e) {} }
+    paintOut();
+  }
+
+  const val = (n) => (document.querySelector('input[name="' + n + '"]:checked') || {}).value;
+  const setVal = (n, v) => { const el = document.querySelector('input[name="' + n + '"][value="' + v + '"]'); if (el) el.checked = true; syncPesan(); };
+  function syncPesan() { $('pesanWrap').classList.toggle('hide', val('aktif') !== '0'); }
+  document.querySelectorAll('input[name="aktif"]').forEach((r) => r.addEventListener('change', syncPesan));
+  $('fKode').addEventListener('input', () => { const p = $('fKode').selectionStart, v = $('fKode').value.toUpperCase().replace(/[^A-Z0-9 -]/g, ''); if (v !== $('fKode').value) { $('fKode').value = v; try { $('fKode').setSelectionRange(p, p); } catch (e) {} } });
+
+  $('btnGen').onclick = () => {
+    const words = ($('fNama').value || 'TOKO').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+    let base = ''; for (const w of words) { if ((base + w).length > 12) break; base += w; if (base.length >= 6) break; }
+    if (!base) base = (words[0] || 'TOKO').slice(0, 12);
+    const n = crypto.getRandomValues(new Uint16Array(1))[0] % 9000 + 1000;
+    $('fKode').value = base + '-' + n;
+  };
+
+  async function checkServer(url) {
+    if (!T.GAS_RE.test(url)) return { ok: false, error: 'Format URL salah. Harus diawali https://script.google.com/… dan diakhiri <b>/exec</b> (bukan /dev).' };
+    try {
+      const r = await fetch(url, { redirect: 'follow', cache: 'no-store' });
+      const j = JSON.parse(await r.text());
+      if (!j.ok || !j.data || j.data.app !== 'Qasir') return { ok: false, error: 'Server membalas, tetapi bukan server Qasir.' };
+      let nama = '';
+      try {
+        const s = await fetch(url, { method: 'POST', redirect: 'follow', cache: 'no-store', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'shopInfo', data: {} }) });
+        const sj = JSON.parse(await s.text()); nama = (sj.ok && sj.data && sj.data.toko && sj.data.toko.nama) || '';
+      } catch (e) {}
+      return { ok: true, version: j.data.version, ready: j.data.ready, nama };
+    } catch (e) {
+      return { ok: false, error: 'Server tidak bisa dihubungi. Pastikan deploy sebagai <b>Web app</b>, "Execute as: Me" dan "Who has access: Anyone".' };
+    }
+  }
+  $('btnCheck').onclick = async () => {
+    const url = $('fUrl').value.trim(); busy('btnCheck', true); msg('checkMsg', 'Menghubungi server…', 'info');
+    const r = await checkServer(url); busy('btnCheck', false);
+    if (!r.ok) return msg('checkMsg', r.error, 'bad');
+    msg('checkMsg', 'Terhubung ke server Qasir v' + esc(r.version) + (r.ready ? ' · database siap' : ' · <b>database belum disiapkan</b> (jalankan fungsi setup di Apps Script)') + (r.nama ? ' · nama toko: <b>' + esc(r.nama) + '</b>' : ''), r.ready ? 'ok' : 'warn');
+    if (r.nama && !$('fNama').value.trim()) $('fNama').value = r.nama;
+  };
+
+  $('btnFind').onclick = async () => {
+    const kode = T.norm($('fKode').value); if (!kode) return msg('saveMsg', 'Ketik Kode Toko yang ingin dicari.', 'bad');
+    $('fKode').value = kode; busy('btnFind', true);
+    try {
+      const d = await T.derive(kode), blob = work.toko[d.id];
+      if (!blob) { msg('saveMsg', 'Kode <b>' + esc(kode) + '</b> belum ada di daftar. Isi data lalu klik Simpan untuk menambahkannya.', 'info'); return; }
+      const info = await T.unseal(kode, blob);
+      $('fNama').value = info.n || ''; $('fUrl').value = info.u || ''; $('fPesan').value = info.m || '';
+      setVal('paket', info.p === 'kasir' ? 'kasir' : 'online'); setVal('aktif', info.a === 0 ? '0' : '1');
+      msg('saveMsg', 'Data <b>' + esc(kode) + '</b> dimuat. Ubah yang perlu, lalu klik Simpan.', 'ok'); showLinks(kode, info.p);
+    } catch (e) { msg('saveMsg', 'Gagal membaca entri: ' + esc(e.message), 'bad'); } finally { busy('btnFind', false); }
+  };
+
+  $('btnSave').onclick = async () => {
+    const kode = T.norm($('fKode').value), url = $('fUrl').value.trim(), paket = val('paket'), aktif = val('aktif') === '1';
+    if (kode.length < 3) return msg('saveMsg', 'Kode Toko minimal 3 huruf/angka.', 'bad');
+    if (!T.GAS_RE.test(url)) return msg('saveMsg', 'Alamat server belum benar (harus URL /exec dari Apps Script).', 'bad');
+    $('fKode').value = kode; busy('btnSave', true);
+    try {
+      const info = { u: url, p: paket, a: aktif ? 1 : 0, n: $('fNama').value.trim().slice(0, 60), t: new Date().toISOString().slice(0, 10) };
+      if (!aktif && $('fPesan').value.trim()) info.m = $('fPesan').value.trim().slice(0, 200);
+      const { id, blob } = await T.seal(kode, info);
+      const isNew = !work.toko[id];
+      work.toko[id] = blob; work.diubah = new Date().toISOString().slice(0, 10); dirty++;
+      paintOut(); showLinks(kode, paket);
+      msg('saveMsg', (isNew ? 'Ditambahkan' : 'Diperbarui') + ': <b>' + esc(kode) + '</b> · ' + (paket === 'kasir' ? 'Paket Kasir' : 'Paket Kasir + Jual Online') + (aktif ? '' : ' · <b>nonaktif</b>') + '. Lanjut ke langkah 3.', 'ok');
+    } catch (e) { msg('saveMsg', 'Gagal: ' + esc(e.message), 'bad'); } finally { busy('btnSave', false); }
+  };
+  $('btnDel').onclick = async () => {
+    const kode = T.norm($('fKode').value); if (!kode) return msg('saveMsg', 'Ketik Kode Toko yang ingin dihapus.', 'bad');
+    const d = await T.derive(kode);
+    if (!work.toko[d.id]) return msg('saveMsg', 'Kode <b>' + esc(kode) + '</b> tidak ada di daftar.', 'bad');
+    if (!confirm('Hapus ' + kode + ' dari daftar?\n\nCatatan: HP yang sudah memakai kode ini tetap berjalan dari salinannya. Untuk mengunci aplikasi klien, pilih Status "Nonaktif" lalu Simpan, bukan Hapus.')) return;
+    delete work.toko[d.id]; dirty++; paintOut(); $('linkCard').classList.add('hide');
+    msg('saveMsg', 'Dihapus: <b>' + esc(kode) + '</b>. Lanjut ke langkah 3.', 'ok');
+  };
+  $('btnClear').onclick = () => { ['fNama', 'fKode', 'fUrl', 'fPesan'].forEach((i) => ($(i).value = '')); setVal('paket', 'online'); setVal('aktif', '1'); hide('saveMsg'); hide('checkMsg'); $('linkCard').classList.add('hide'); };
+
+  let qrUrl = '';
+  function loadQr() { return window.qrcode ? Promise.resolve() : new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+  async function showLinks(kode, paket) {
+    const app = BASE + '?k=' + encodeURIComponent(kode), shop = BASE + 'toko.html?k=' + encodeURIComponent(kode);
+    $('lApp').textContent = app; $('lShop').textContent = shop; $('lShopWrap').classList.toggle('hide', paket === 'kasir');
+    $('linkCard').classList.remove('hide');
+    $('btnCopyCard').onclick = () => copy('Aplikasi kasir Qasir sudah siap.\n\nKode Toko: ' + kode + '\nBuka aplikasi: ' + app + (paket === 'kasir' ? '' : '\nLink toko online untuk pelanggan: ' + shop) + '\n\nBuka link aplikasi di Chrome (Android) atau Safari (iPhone), lalu pilih "Tambahkan ke layar utama" / "Instal aplikasi".', 'saveMsg', 'Pesan untuk klien disalin.');
+    try {
+      await loadQr(); const q = window.qrcode(0, 'M'); q.addData(app); q.make();
+      qrUrl = q.createDataURL(8, 2); $('qr').innerHTML = '<img alt="QR aplikasi" src="' + qrUrl + '">';
+      $('btnQr').onclick = () => { const a = document.createElement('a'); a.href = qrUrl; a.download = 'QR-Aplikasi-' + kode + '.gif'; a.click(); };
+    } catch (e) { $('qr').innerHTML = '<div class="muted small">QR butuh internet.</div>'; }
+  }
+
+  async function copy(text, el, okText) {
+    try { await navigator.clipboard.writeText(text); msg(el, okText, 'ok'); }
+    catch (e) { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); msg(el, okText, 'ok'); }
+  }
+  $('btnCopy').onclick = () => copy(serialize(), 'outMsg', 'Isi toko.json disalin (' + count() + ' toko). Tempel di GitHub, lalu Commit changes.');
+  $('btnGh').href = 'https://github.com/' + REPO + '/edit/main/toko.json';
+  $('btnDl').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([serialize()], { type: 'application/json' })); a.download = 'toko.json'; a.click(); };
+  $('btnTest').onclick = async () => {
+    const kode = T.norm($('fKode').value); if (!kode) return msg('outMsg', 'Isi Kode Toko di langkah 2 untuk diuji.', 'bad');
+    busy('btnTest', true); const r = await T.resolve(kode); busy('btnTest', false);
+    if (!r.ok) return msg('outMsg', esc(r.error) + (r.code === 'NOTFOUND' ? ' Jika baru saja Commit, tunggu 1 menit lalu uji lagi.' : ''), 'bad');
+    msg('outMsg', 'Kode <b>' + esc(kode) + '</b> sudah aktif di situs · ' + (r.t.paket === 'kasir' ? 'Paket Kasir' : 'Paket Kasir + Jual Online') + (r.t.aktif ? '' : ' · nonaktif') + '.', 'ok');
+    loadReg();
+  };
+  $('btnReload').onclick = loadReg;
+  window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+  loadReg();
+})();
+</script>
+</body>
+</html>

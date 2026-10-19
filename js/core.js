@@ -7,8 +7,11 @@
 'use strict';
 
 const CFG = window.QASIR_CONFIG || {};
-const GAS_URL = CFG.GAS_URL || '';
-const LS_PREFIX = 'qasir:v1:';
+const APP_VER = '1.4.0';
+const GAS_URL = CFG.GAS_URL || '';                       // diisi tenant.js dari Kode Toko
+const NS = window.QASIR_NS || '';                         // namespace data lokal per toko ('' = data lama)
+const LS_PREFIX = 'qasir:v1:' + NS;
+const Tenant = window.QasirTenant || { multi: false, has: () => true, withKode: (u) => u, paketLabel: '' };
 
 /* ---------------------------------------------------------------- Utilitas */
 const $ = (s, r) => (r || document).querySelector(s);
@@ -75,7 +78,7 @@ const DB = {
   open() {
     if (this._p) return this._p;
     this._p = new Promise((res, rej) => {
-      const r = indexedDB.open('qasir', 1);
+      const r = indexedDB.open('qasir' + (NS ? '-' + NS.replace(/[^\w]/g, '') : ''), 1);
       r.onupgradeneeded = () => {
         const db = r.result;
         db.createObjectStore('kv');
@@ -162,7 +165,7 @@ function waitOnline(ms) {
 }
 async function api(action, data, opt) {
   opt = opt || {};
-  if (!GAS_URL || GAS_URL.indexOf('GANTI_DENGAN') > -1) return { ok: false, error: 'URL server belum diatur. Isi GAS_URL di js/config.js.' };
+  if (!GAS_URL || GAS_URL.indexOf('GANTI_DENGAN') > -1) return { ok: false, error: Tenant.multi ? 'Toko belum dipilih. Masukkan Kode Toko.' : 'URL server belum diatur. Isi GAS_URL di js/config.js.' };
   const isRead = READ_ACTIONS.test(action);
   const reqId = isRead ? '' : (opt.reqId || uuid());
   const tries = opt.tries || (isRead ? 3 : 2);
@@ -631,6 +634,7 @@ function route() {
   if (!App.session) { if (name !== 'login') { replaceRoute('login'); return; } Pages.login.mount(); return; }
   const def = Pages[name];
   if (!def || name === 'login' || (def.role && def.role !== App.role)) { replaceRoute(homePage()); return; }
+  if (def.paket && !Tenant.has(def.paket)) { replaceRoute('paket'); return; }   // fitur di luar paket toko ini
   const main = $('#main'); if (!main) return;
   const prev = $('.page[data-page="' + App.current + '"]'); if (prev) prev._scroll = window.scrollY;
   let el = $('.page[data-page="' + name + '"]', main);

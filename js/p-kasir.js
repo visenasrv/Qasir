@@ -24,7 +24,8 @@ Pages.login = {
       '<button class="btn primary block lg" id="lgBtn" type="submit" style="margin-top:16px">Masuk ' + icon('arrow-right', 'sm') + '</button>' +
       '<div class="muted" style="text-align:center;font-size:13.5px;margin-top:14px">Lupa PIN? Hubungi pemilik toko</div></form>' +
       '<div class="banner warn" style="margin-top:16px">' + icon('wifi-off', 'sm') + '<div>Bisa login tanpa internet jika perangkat ini pernah dipakai login.</div></div>' +
-      '<div class="faint" style="text-align:center;font-size:12px;margin-top:18px">Qasir v' + esc(CFG.APP_VERSION || '1.0') + '</div></div></div>';
+      (Tenant.multi && Tenant.current ? '<div class="tenant-line">' + icon('store', 'xs') + '<span>Kode Toko <b class="mono">' + esc(Tenant.current.kode) + '</b></span><button type="button" class="link-btn" id="lgSwitch">Ganti toko</button></div>' : '') +
+      '<div class="faint" style="text-align:center;font-size:12px;margin-top:18px">Qasir v' + esc(APP_VER) + '</div></div></div>';
     const pin = $('#lgPin'), boxes = $$('#pinBoxes span');
     let show = false;
     const paint = () => {
@@ -32,6 +33,7 @@ Pages.login = {
       boxes.forEach((b, i) => { b.className = (i < v.length ? 'fill' : '') + (show && i < v.length ? ' show' : '') + (i === Math.min(v.length, 5) && document.activeElement === pin ? ' cur' : ''); b.textContent = show && i < v.length ? v[i] : ''; });
       if (v.length === 6 && $('#lgUser').value.trim()) $('#loginForm').requestSubmit();
     };
+    const sw = $('#lgSwitch'); if (sw) sw.onclick = () => KodeGate.switchStore();
     pin.addEventListener('input', paint); pin.addEventListener('focus', paint); pin.addEventListener('blur', paint);
     $('#lgEye').onclick = () => { show = !show; $('#lgEye').innerHTML = icon(show ? 'eye-off' : 'eye', 'sm'); paint(); };
     (last ? pin : $('#lgUser')).focus();
@@ -54,6 +56,78 @@ Pages.login = {
       if (r.offline) toast('Masuk mode offline. Data akan disinkron saat online.', 'warn', 4000);
       Shell.start();
     };
+  }
+};
+
+/* ============================================================ KODE TOKO */
+/** Layar pertama di perangkat baru: pilih toko dengan Kode Toko (lihat js/tenant.js). */
+const KodeGate = {
+  wa() { return waNumber(CFG.SELLER_WA || '082213712168'); },
+  frame(inner) {
+    applyTheme({ warna_primer: '#F26B1D' });
+    $('#app').innerHTML = '<div class="login"><div class="box">' +
+      '<div class="brand"><div class="logo lg" style="margin:0 auto">Q</div><h2>Qasir</h2><div class="muted">Aplikasi kasir UMKM makanan & minuman</div></div>' + inner +
+      '<div class="faint" style="text-align:center;font-size:12px;margin-top:18px">Qasir v' + esc(APP_VER) + '</div></div></div>';
+  },
+  mount() {
+    const T = Tenant;
+    if (T.blocked) return this.blockedView(T.current);
+    if (T.current && T.wantKode) return this.confirmSwitch(T.current, T.wantKode);
+    this.form(T.wantKode);
+  },
+  form(prefill, err) {
+    this.frame('<form class="card pad" id="kgForm" autocomplete="off">' +
+      '<div style="font-weight:800;font-size:17px;margin-bottom:4px">Masukkan Kode Toko</div>' +
+      '<div class="muted" style="font-size:13.5px;margin-bottom:14px">Kode Toko diberikan saat aplikasi dipasang. Cukup sekali di perangkat ini.</div>' +
+      '<label class="field"><span class="lbl">KODE TOKO</span><div class="input-wrap">' + icon('store', 'sm') + '<input class="input mono kode-input" id="kgKode" placeholder="contoh: KEDAIBUDI-4821" maxlength="32" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" value="' + esc(prefill || '') + '"></div></label>' +
+      '<div class="err" id="kgErr"' + (err ? '' : ' hidden') + '>' + esc(err || '') + '</div>' +
+      '<button class="btn primary block lg" id="kgBtn" type="submit" style="margin-top:14px">Lanjut ' + icon('arrow-right', 'sm') + '</button></form>' +
+      '<div class="muted" style="text-align:center;font-size:13.5px;margin-top:16px">Belum punya Kode Toko? <a class="link-btn" target="_blank" rel="noopener" href="https://wa.me/' + this.wa() + '?text=' + encodeURIComponent('Halo admin Qasir, saya ingin tanya aplikasi kasir Qasir.') + '">Hubungi admin Qasir</a></div>');
+    const inp = $('#kgKode'), f = $('#kgForm');
+    inp.addEventListener('input', () => { const p = inp.selectionStart, v = inp.value.toUpperCase().replace(/[^A-Z0-9 -]/g, ''); if (v !== inp.value) { inp.value = v; try { inp.setSelectionRange(p, p); } catch (e) {} } $('#kgErr').hidden = true; });
+    f.onsubmit = async (e) => { e.preventDefault(); await this.submit(inp.value); };
+    if (prefill && !err) this.submit(prefill); else setTimeout(() => inp.focus(), 60);
+  },
+  async submit(raw) {
+    const btn = $('#kgBtn'), errEl = $('#kgErr'), kode = Tenant.norm(raw);
+    if (!kode) { errEl.hidden = false; errEl.textContent = 'Isi Kode Toko terlebih dahulu.'; return; }
+    if ($('#kgKode')) $('#kgKode').value = kode;
+    busy(btn, true); errEl.hidden = true;
+    const r = await Tenant.resolve(kode);
+    busy(btn, false);
+    if (!r.ok) { errEl.hidden = false; errEl.textContent = r.error; $('#kgKode').focus(); return; }
+    if (!r.t.aktif) { this.blockedView(r.t, true); return; }
+    btn.innerHTML = icon('check', 'sm') + 'Terhubung' + (r.t.nama ? ' ke ' + esc(r.t.nama) : '');
+    Tenant.choose(r.t);
+  },
+  confirmSwitch(cur, want) {
+    this.frame('<div class="card pad">' +
+      '<div style="font-weight:800;font-size:17px;margin-bottom:6px">Buka toko lain?</div>' +
+      '<div class="muted" style="font-size:13.5px">Perangkat ini sedang terhubung ke <b>' + esc(cur.nama || cur.kode) + '</b> (' + esc(cur.kode) + '). Tautan yang Anda buka meminta toko <b class="mono">' + esc(want) + '</b>.</div>' +
+      '<div class="help" style="margin-top:10px">' + icon('info', 'xs') + 'Data tiap toko disimpan terpisah. Anda bisa kembali kapan saja lewat "Ganti toko" di layar masuk.</div>' +
+      '<button class="btn primary block lg" id="kgGo" type="button" style="margin-top:14px">Buka toko ' + esc(want) + '</button>' +
+      '<button class="btn outline block" id="kgStay" type="button" style="margin-top:8px">Tetap di ' + esc(cur.nama || cur.kode) + '</button></div>');
+    $('#kgStay').onclick = () => Tenant.stay();
+    $('#kgGo').onclick = () => { Tenant.wantKode = ''; this.form(want); };
+  },
+  blockedView(t, fresh) {
+    t = t || {};
+    const msg = 'Halo admin Qasir, aplikasi toko saya dinonaktifkan.\nKode Toko: ' + (t.kode || '-');
+    this.frame('<div class="card pad" style="text-align:center">' +
+      '<span class="ico-box warn" style="margin:0 auto 10px">' + icon('lock') + '</span>' +
+      '<div style="font-weight:800;font-size:17px">Aplikasi toko ini sedang nonaktif</div>' +
+      '<div class="muted" style="font-size:13.5px;margin-top:6px">' + esc(t.pesan || 'Silakan hubungi admin Qasir untuk mengaktifkan kembali.') + '</div>' +
+      '<div class="mono" style="margin-top:10px;font-weight:700">' + esc(t.kode || '') + '</div>' +
+      '<a class="btn primary block lg" style="margin-top:14px;background:#16A34A;border-color:#16A34A" target="_blank" rel="noopener" href="https://wa.me/' + this.wa() + '?text=' + encodeURIComponent(msg) + '">' + icon('whatsapp', 'sm') + 'Hubungi admin</a>' +
+      '<div class="row" style="justify-content:center;gap:16px;margin-top:12px">' + (fresh ? '' : '<button class="link-btn" id="kgRetry" type="button">Periksa lagi</button>') + '<button class="link-btn" id="kgOther" type="button">Pakai Kode Toko lain</button></div></div>');
+    const rt = $('#kgRetry'); if (rt) rt.onclick = async () => { busy(rt, true); const r = await Tenant.refresh(); busy(rt, false); if (r && r.ok && r.t.aktif) location.reload(); else toast(r && !r.ok ? r.error : 'Toko masih nonaktif.', 'warn'); };
+    $('#kgOther').onclick = () => { if (fresh) this.form(''); else Tenant.forget(); };
+  },
+  /** Dari layar masuk: lepas toko ini dari perangkat (data tetap tersimpan terpisah). */
+  async switchStore() {
+    let pend = 0; try { pend = await DB.count('outbox'); } catch (e) {}
+    const ok = await confirmDlg({ title: 'Ganti toko?', msg: (pend ? 'Masih ada ' + pend + ' data yang belum terkirim ke server toko ini. Data itu tetap aman di perangkat dan terkirim saat Anda kembali ke toko ini. ' : '') + 'Anda akan diminta memasukkan Kode Toko lain.', okText: 'Ganti toko', danger: !!pend });
+    if (ok) Tenant.forget();
   }
 };
 

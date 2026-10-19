@@ -1,4 +1,4 @@
-# Qasir v1.3.4
+# Qasir v1.4.0
 
 Aplikasi kasir (POS) untuk UMKM makanan & minuman — warung makan, kedai kopi & minuman, toko kue, jajanan & snack, katering. Frontend statis (GitHub Pages) + backend Google Apps Script sebagai REST API, data di Google Sheets & Google Drive.
 
@@ -16,15 +16,19 @@ Aplikasi kasir (POS) untuk UMKM makanan & minuman — warung makan, kedai kopi &
 - **Daftar Menu** (gambar/PDF/teks WA), **Prompt Menu AI** (menu dengan foto produk), **Prompt Poster Promo** (ID/EN untuk AI gambar), **Cetak Label Barcode** (A4 3×8 / thermal).
 - **Jual Online** (`toko.html`): toko online pelanggan via link & QR meja — ambil/antar/makan di tempat, bayar di tempat atau transfer/QRIS + bukti; banner, pengumuman, urutan menu, best seller, label baru, promo khusus online; pesanan masuk ke **Pesanan Online** (bunyi + badge), stok berkurang saat diterima. Saklar buka/tutup toko online berlaku seketika, QR meja dengan pratinjau + unduh PDF/PNG/cetak, urutan menu & banner dengan drag & drop.
 - **Tutup Toko** → laporan email + PDF otomatis ke pemilik.
+- **Kode Toko** (v1.4.0): satu situs untuk banyak klien. Tiap klien punya server & Google Sheet sendiri, paket **Kasir** atau **Kasir + Jual Online**, dikelola lewat `kelola.html` + `toko.json`.
 
 ## Struktur
 ```
 index.html            Kerangka aplikasi kasir (SPA)
 toko.html             Toko online untuk pelanggan (publik)
+kelola.html           Alat penjual: buat/ubah Kode Toko (hasil ditempel ke toko.json)
+toko.json             Daftar Kode Toko (terenkripsi) — ubah lewat kelola.html
 sw.js                 Service worker: buka instan & offline
 manifest.webmanifest  Pasang sebagai aplikasi di HP
 css/style.css         Desain "Warm Artisanal POS"
-js/config.js          ← ISI GAS_URL DI SINI
+js/config.js          Nomor WA admin, repo GitHub, alamat toko lama (opsional)
+js/tenant.js          Kode Toko → alamat server + paket (dimuat sebelum core.js)
 js/core.js            API, sesi, IndexedDB, antrean sinkron, router, komponen UI
 js/export.js          Simpan gambar/PDF, cache gambar, salin gambar, kamera webcam
 js/app.js             Shell, navigasi, start-up

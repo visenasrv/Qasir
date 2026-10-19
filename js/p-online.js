@@ -18,8 +18,8 @@ function onlineCfg() {
   d.ongkir = Object.assign({}, ONLINE_DEFAULT.ongkir, c.ongkir || {}); d.urutan = Object.assign({ cats: [], prods: {} }, c.urutan || {});
   return d;
 }
-const onlineOn = () => !!(App.boot && onlineCfg().aktif);
-function shopUrl(meja) { const u = new URL('toko.html', location.href.split('#')[0]); if (meja) u.searchParams.set('meja', meja); return u.href; }
+const onlineOn = () => Tenant.has('online') && !!(App.boot && onlineCfg().aktif);
+function shopUrl(meja) { const u = new URL(Tenant.withKode(new URL('toko.html', location.href.split('#')[0].split('?')[0]).href)); if (meja) u.searchParams.set('meja', meja); return u.href; }
 function ago(v) { const m = Math.round((Date.now() - new Date(v).getTime()) / 60000); return m < 1 ? 'baru saja' : m < 60 ? m + ' mnt lalu' : m < 1440 ? Math.floor(m / 60) + ' jam lalu' : fmtDT(v); }
 
 /* ---------------------------------------------------------- Mesin pesanan */
@@ -72,7 +72,7 @@ window.Orders = Orders;
 const ORDER_STATUS = { BARU: ['Baru', 'warn'], DITERIMA: ['Diproses', 'info'], SELESAI: ['Selesai', 'ok'], DITOLAK: ['Ditolak', 'bad'], DIBATALKAN: ['Dibatalkan', 'bad'] };
 const ORDER_TIPE = { AMBIL: ['Ambil di toko', 'bag'], ANTAR: ['Diantar', 'truck'], MEJA: ['Makan di tempat', 'utensils'] };
 page('pesanan', {
-  keepScroll: true,
+  keepScroll: true, paket: 'online',
   st: { tab: 'BARU' },
   template() {
     return topbar({ title: 'Pesanan Online', sub: '<span class="js-po-sub"></span>', right: (App.isOwner ? '<a class="icon-btn ghost-border" href="#/online" aria-label="Pengaturan toko online">' + icon('settings', 'sm') + '</a>' : '') + syncPill() }) +
@@ -379,7 +379,7 @@ function openQrMeja(cfg, onCount) {
   return s;
 }
 page('online', {
-  role: 'OWNER', nav: false, foot: true, backTo: 'lainnya',
+  role: 'OWNER', nav: false, foot: true, backTo: 'lainnya', paket: 'online',
   st: { open: 'status' },
   template() {
     return topbar({ back: true, title: 'Jual Online', sub: 'Toko online, QR meja & tampilan', right: '<button class="btn sm outline" data-act="preview" type="button">' + icon('eye', 'sm') + '<span class="hide-sm">Lihat Toko</span></button>' }) +
@@ -569,5 +569,23 @@ page('online', {
       if (ok) toast(c.aktif ? 'Tersimpan — toko online langsung diperbarui' : 'Pengaturan tersimpan (toko online nonaktif)', 'ok', 3000);
       return ok;
     }
+  }
+});
+
+
+/* ============================================ PAKET (fitur Jual Online terkunci) */
+function sellerWa() { return waNumber(CFG.SELLER_WA || '082213712168'); }
+page('paket', {
+  backTo: 'lainnya',
+  template() {
+    const t = Tenant.current || {};
+    const msg = 'Halo admin Qasir, saya ingin upgrade ke Paket Kasir + Jual Online.\nToko: ' + (App.settings.nama_toko || t.nama || '') + '\nKode Toko: ' + (t.kode || '-');
+    const feat = [['globe', 'Toko online sendiri', 'Link & QR toko untuk dibagikan ke pelanggan'], ['utensils', 'Pesan dari meja', 'Pelanggan scan QR meja, pesanan langsung masuk'], ['inbox', 'Pesanan Online', 'Terima, tolak, dan selesaikan pesanan dari kasir'], ['qr-code', 'Bayar QRIS / transfer', 'Pelanggan bisa bayar sebelum mengambil']];
+    return topbar({ back: true, title: 'Jual Online', sub: 'Paket Anda: ' + (Tenant.paketLabel || 'Kasir') }) +
+      '<div class="wrap" style="padding-top:16px;max-width:560px"><div class="card pad upsell">' +
+      '<div class="row" style="gap:12px"><span class="ico-box warn">' + icon('lock') + '</span><div class="grow"><div style="font-weight:800;font-size:17px">Fitur ini ada di Paket Kasir + Jual Online</div><div class="muted" style="font-size:13.5px">Data dan transaksi Anda tetap utuh saat upgrade — tidak perlu pasang ulang.</div></div></div>' +
+      '<div class="upsell-list">' + feat.map((f) => '<div class="row" style="gap:12px;align-items:flex-start"><span class="ico-box">' + icon(f[0], 'sm') + '</span><div><b>' + f[1] + '</b><div class="muted" style="font-size:13px">' + f[2] + '</div></div></div>').join('') + '</div>' +
+      '<a class="btn primary block lg" style="background:#16A34A;border-color:#16A34A" target="_blank" rel="noopener" href="https://wa.me/' + sellerWa() + '?text=' + encodeURIComponent(msg) + '">' + icon('whatsapp', 'sm') + 'Tanya upgrade lewat WhatsApp</a>' +
+      '</div></div>';
   }
 });
